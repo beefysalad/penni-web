@@ -19,9 +19,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Nexion - Fullstack Template',
-  description:
-    'Nexion is a full-stack Next.js template with auth, database, and type safety. Created by Patrick',
+  title: 'Penni Web',
+  description: 'Penni on the web. A calm, finance-first dashboard experience.',
 }
 
 export default function RootLayout({
@@ -35,7 +34,7 @@ export default function RootLayout({
         <ClerkProvider>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme="dark"
             enableSystem
             disableTransitionOnChange
           >
