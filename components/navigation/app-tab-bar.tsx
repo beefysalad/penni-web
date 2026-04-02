@@ -1,5 +1,7 @@
 'use client'
 
+import { UserButton, useUser } from '@clerk/nextjs'
+import { useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx, type ClassValue } from 'clsx'
@@ -26,6 +28,13 @@ const TABS = [
 
 export function AppTabBar() {
   const pathname = usePathname()
+  const { user } = useUser()
+  const userMenuRef = useRef<HTMLDivElement | null>(null)
+
+  const openUserMenu = () => {
+    const trigger = userMenuRef.current?.querySelector('button')
+    trigger?.click()
+  }
 
   return (
     <>
@@ -61,6 +70,42 @@ export function AppTabBar() {
               </Link>
             )
           })}
+        </div>
+
+        <div
+          className="mt-auto cursor-pointer rounded-[22px] border border-[#162019] bg-[#0d1511] p-3 transition-colors hover:bg-[#111916]"
+          onClick={openUserMenu}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              openUserMenu()
+            }
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div ref={userMenuRef}>
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: 'h-10 w-10',
+                    userButtonPopoverCard: 'bg-[#111916] text-[#f4f7f5]',
+                    userButtonPopoverActionButton: 'text-[#f4f7f5]',
+                    userButtonPopoverFooter: 'hidden',
+                  },
+                }}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-[#f4f7f5]">
+                {user?.fullName || 'Penni User'}
+              </p>
+              <p className="truncate text-xs text-[#7f8c86]">
+                {user?.primaryEmailAddress?.emailAddress || 'Manage account'}
+              </p>
+            </div>
+          </div>
         </div>
       </aside>
 

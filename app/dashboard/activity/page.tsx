@@ -16,7 +16,8 @@ import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { groupTransactionsIntoSections } from '@/lib/selectors'
 import { TYPE_FILTERS, type TypeFilter } from '@/lib/constants'
 import type { CategoryType } from '@/lib/finance.types'
-import { ReceiptText, Search, Plus, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { ReceiptText, Search, Plus, Trash2, ArrowUpRight, ArrowDownLeft, WalletCards, Calendar } from 'lucide-react'
 
 type TransactionForm = {
   type: CategoryType
@@ -73,6 +74,15 @@ export default function ActivityPage() {
   }, [allTransactions, searchQuery, activeTypeFilter])
 
   const sections = useMemo(() => groupTransactionsIntoSections(filteredTransactions), [filteredTransactions])
+  const totalIncome = useMemo(
+    () => allTransactions.filter((transaction) => transaction.type === 'INCOME').reduce((sum, transaction) => sum + Number(transaction.amount), 0),
+    [allTransactions]
+  )
+  const totalExpense = useMemo(
+    () => allTransactions.filter((transaction) => transaction.type === 'EXPENSE').reduce((sum, transaction) => sum + Number(transaction.amount), 0),
+    [allTransactions]
+  )
+  const netCashFlow = totalIncome - totalExpense
 
   const handleCreateTransaction = () => {
     const title = form.title.trim()
@@ -124,6 +134,68 @@ export default function ActivityPage() {
       </DashboardHeaderShell>
 
       <div className="flex flex-col gap-5 px-4 pt-6 pb-28 md:px-6 lg:px-8 animate-in fade-in duration-500">
+        {transactionsQuery.isLoading ? (
+          <div className="h-48 w-full rounded-[30px] bg-[#111916] animate-pulse" />
+        ) : (
+          <div className="rounded-[30px] border border-[#1b2a21] bg-[#111916] p-5 shadow-xl shadow-black/20">
+            <div className="flex flex-row items-start justify-between gap-4">
+              <div className="flex-1">
+                <p className="text-[13px] font-bold text-[#73827a]">Net cash flow</p>
+                <h2
+                  className={cn(
+                    'mt-2 text-[38px] leading-none font-bold tracking-tight',
+                    netCashFlow < 0 ? 'text-[#ff8a94]' : 'text-[#41d6b2]'
+                  )}
+                >
+                  {netCashFlow < 0 ? '-' : '+'}₱{Math.abs(netCashFlow).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h2>
+              </div>
+              <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
+                <ArrowUpRight className="size-5 text-[#41d6b2]" />
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-row gap-3">
+              <div className="flex-1 rounded-[24px] bg-[#18221d] p-4">
+                <div className="flex size-10 items-center justify-center rounded-full bg-[#1f3325]">
+                  <ArrowUpRight className="size-5 text-[#41d6b2]" />
+                </div>
+                <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#93a19a] uppercase">Income</p>
+                <p className="mt-2 text-[17px] leading-tight font-bold text-[#41d6b2]">
+                  ₱{totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+
+              <div className="flex-1 rounded-[24px] bg-[#1d1518] p-4">
+                <div className="flex size-10 items-center justify-center rounded-full bg-[#2a1b20]">
+                  <ArrowDownLeft className="size-5 text-[#ff8a94]" />
+                </div>
+                <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#93a19a] uppercase">Expenses</p>
+                <p className="mt-2 text-[17px] leading-tight font-bold text-[#ff8a94]">
+                  ₱{totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+
+            <div className="no-scrollbar mt-5 flex flex-row gap-2.5 overflow-x-auto pb-1">
+              <Link
+                href="/dashboard/accounts"
+                className="flex flex-row items-center gap-2 rounded-full bg-[#18221d] px-4 py-2 whitespace-nowrap transition-colors hover:bg-[#202c26]"
+              >
+                <WalletCards className="size-3.5 text-[#8bff62]" />
+                <span className="text-[11px] font-bold text-[#93a19a]">Accounts</span>
+              </Link>
+              <Link
+                href="/dashboard/planned-items"
+                className="flex flex-row items-center gap-2 rounded-full bg-[#18221d] px-4 py-2 whitespace-nowrap transition-colors hover:bg-[#202c26]"
+              >
+                <Calendar className="size-3.5 text-[#41d6b2]" />
+                <span className="text-[11px] font-bold text-[#93a19a]">Plan ahead</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
         <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

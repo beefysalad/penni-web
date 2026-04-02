@@ -67,10 +67,16 @@ export default function SettingsPage() {
     {
       title: 'Finance',
       items: [
-        { icon: Wallet, label: 'Linked Accounts', value: '3 linked', href: '/dashboard/accounts' },
-        { icon: Tag, label: 'Categories', value: 'Manage labels', href: '/dashboard/categories' },
-        { icon: Sparkles, label: 'Planned Items', href: '/dashboard/planned-items' },
-        { icon: Wallet, label: 'Budgets', value: 'Manage limits', href: '/dashboard/budgets' },
+        { icon: Sparkles, label: 'Recurring items', value: 'Upcoming scheduled bills and income', href: '/dashboard/planned-items' },
+        { icon: Tag, label: 'Categories', value: 'Organize spending and income', href: '/dashboard/categories' },
+        { icon: Wallet, label: 'Budgets', value: 'Set monthly limits by category', href: '/dashboard/budgets' },
+      ]
+    },
+    {
+      title: 'App',
+      items: [
+        { icon: Sparkles, label: 'AI Chat', value: 'Natural-language command assistant', href: '#' },
+        { icon: Globe, label: 'Preferences', value: 'Currency, appearance, and defaults', href: '#' },
       ]
     },
     {
@@ -93,9 +99,9 @@ export default function SettingsPage() {
     <>
       <DashboardHeaderShell>
         <AppPageHeader
-          eyebrow="Profile and settings"
-          title="Settings"
-          subtitle="Manage your profile, connected accounts, and preferences."
+          eyebrow="Your account"
+          title="Profile"
+          subtitle="Review your details, connected sources, and the preferences that shape Penni."
           inverted
         />
       </DashboardHeaderShell>
@@ -171,7 +177,7 @@ export default function SettingsPage() {
 
         <div className="flex flex-col items-center justify-center pt-4">
           <p className="text-[11px] font-bold text-[#1b2a21] uppercase tracking-widest">Penni Web v1.0.0</p>
-          <p className="mt-1 text-[10px] font-medium text-[#1b2a21]">Made with love for your wallet</p>
+          <p className="mt-1 text-[10px] font-medium text-[#1b2a21]">Made with care for your wallet</p>
         </div>
       </div>
     </>

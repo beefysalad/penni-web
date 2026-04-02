@@ -14,7 +14,9 @@ import { buildMonthlyExpenseDistribution, getCurrentMonthBounds, getTransactionM
 import { formatCurrency } from '@/lib/formatters'
 import { 
   BarChart3, 
-  PieChart 
+  PieChart,
+  Activity,
+  Wallet
 } from 'lucide-react'
 
 export default function StatsPage() {
@@ -120,18 +122,35 @@ export default function StatsPage() {
 
         <div className="flex flex-row gap-3">
           <StatTile
-            label="Top category"
-            value={stats.topCategoryName}
-            hint={`${stats.topCategoryShare}% of spend`}
-            icon={PieChart}
-            color="#ffc857"
+            label="Spend pace"
+            value={formatCurrency(stats.monthExpenses)}
+            hint="This month"
+            icon={Activity}
+            color="#8bff62"
           />
           <StatTile
-            label="Month drift"
-            value={stats.monthExpenses > stats.monthIncome ? 'Negative' : 'Healthy'}
-            hint={stats.monthExpenses > stats.monthIncome ? 'Exceeded income' : 'Within means'}
+            label="Top category"
+            value={stats.topCategoryName}
+            hint={`${stats.topCategoryShare}% of spending`}
             icon={BarChart3}
-            color="#8bff62"
+            color="#5aa9ff"
+          />
+        </div>
+
+        <div className="flex flex-row gap-3">
+          <StatTile
+            label="Net cash flow"
+            value={formatCurrency(stats.monthIncome - stats.monthExpenses)}
+            hint="Income vs spending"
+            icon={Wallet}
+            color="#41d6b2"
+          />
+          <StatTile
+            label="Budget drift"
+            value={stats.monthExpenses > stats.monthIncome ? 'Negative' : 'Soon'}
+            hint={stats.monthExpenses > stats.monthIncome ? 'Exceeded income' : 'Budget tracking comes next'}
+            icon={PieChart}
+            color="#ffc857"
           />
         </div>
 
