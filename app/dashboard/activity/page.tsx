@@ -1,239 +1,300 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
-import { 
-  TransactionRow, 
-  AccountSkeletonCard 
-} from '@/components/finance/finance-components'
+import { TransactionRow, AccountSkeletonCard } from '@/components/finance/finance-components'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Pill } from '@/components/ui/pill'
 import { cn } from '@/lib/utils'
-import { 
-  useTransactionsQuery, 
-  usePlannedItemsQuery 
-} from '@/hooks/use-finance-queries'
+import { useTransactionsQuery, useCreateTransactionMutation, useDeleteTransactionMutation } from '@/hooks/finance/use-transactions-query'
+import { useAccountsQuery } from '@/hooks/finance/use-accounts-query'
+import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { groupTransactionsIntoSections } from '@/lib/selectors'
 import { TYPE_FILTERS, type TypeFilter } from '@/lib/constants'
-import { 
-  ReceiptText, 
-  Calendar, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  Search, 
-  Plus 
-} from 'lucide-react'
-import { formatCurrency, formatCompactDate } from '@/lib/formatters'
-import { getDaysUntil } from '@/lib/home-helpers'
+import type { CategoryType } from '@/lib/finance.types'
+import { ReceiptText, Search, Plus, Trash2 } from 'lucide-react'
+
+type TransactionForm = {
+  type: CategoryType
+  title: string
+  amount: string
+  accountId: string
+  categoryId: string
+  transactionAt: string
+  notes: string
+}
+
+const DEFAULT_FORM: TransactionForm = {
+  type: 'EXPENSE',
+  title: '',
+  amount: '',
+  accountId: '',
+  categoryId: '',
+  transactionAt: new Date().toISOString().slice(0, 10),
+  notes: '',
+}
+
+function toIsoDate(dateValue: string) {
+  return new Date(`${dateValue}T12:00:00`).toISOString()
+}
 
 export default function ActivityPage() {
   const transactionsQuery = useTransactionsQuery()
-  const plannedItemsQuery = usePlannedItemsQuery(true)
-  const [activeTab, setActiveTab] = useState<'All' | 'Recurring'>('All')
+  const accountsQuery = useAccountsQuery()
+  const expenseCategoriesQuery = useCategoriesQuery('EXPENSE')
+  const incomeCategoriesQuery = useCategoriesQuery('INCOME')
+  const createTransactionMutation = useCreateTransactionMutation()
+  const deleteTransactionMutation = useDeleteTransactionMutation()
+
   const [activeTypeFilter, setActiveTypeFilter] = useState<TypeFilter>('All')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showComposer, setShowComposer] = useState(false)
+  const [form, setForm] = useState<TransactionForm>(DEFAULT_FORM)
 
   const allTransactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data])
-  const allPlannedItems = useMemo(() => plannedItemsQuery.data ?? [], [plannedItemsQuery.data])
-
-  // --- Transaction Logic ---
+  const accounts = accountsQuery.data ?? []
+  const categories = form.type === 'INCOME' ? incomeCategoriesQuery.data ?? [] : expenseCategoriesQuery.data ?? []
 
   const filteredTransactions = useMemo(() => {
     return allTransactions.filter((t) => {
-      const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           (t.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-      const matchesType = activeTypeFilter === 'All' || 
-                         (activeTypeFilter === 'Expenses' && t.type === 'EXPENSE') || 
-                         (activeTypeFilter === 'Income' && t.type === 'INCOME')
+      const matchesSearch =
+        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (t.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+      const matchesType =
+        activeTypeFilter === 'All' ||
+        (activeTypeFilter === 'Expenses' && t.type === 'EXPENSE') ||
+        (activeTypeFilter === 'Income' && t.type === 'INCOME')
       return matchesSearch && matchesType
     })
   }, [allTransactions, searchQuery, activeTypeFilter])
 
   const sections = useMemo(() => groupTransactionsIntoSections(filteredTransactions), [filteredTransactions])
 
-  // --- Recurring Logic ---
+  const handleCreateTransaction = () => {
+    const title = form.title.trim()
+    const amount = Number(form.amount)
 
-  const filteredPlannedItems = useMemo(() => {
-    return allPlannedItems.filter((item) => {
-      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesType = activeTypeFilter === 'All' || 
-                         (activeTypeFilter === 'Expenses' && item.type === 'EXPENSE') || 
-                         (activeTypeFilter === 'Income' && item.type === 'INCOME')
-      return matchesSearch && matchesType
-    })
-  }, [allPlannedItems, searchQuery, activeTypeFilter])
+    if (!title) {
+      toast.error('Transaction title is required.')
+      return
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Enter a valid amount.')
+      return
+    }
+
+    createTransactionMutation.mutate(
+      {
+        accountId: form.accountId || undefined,
+        categoryId: form.categoryId || undefined,
+        type: form.type,
+        title,
+        notes: form.notes.trim() || undefined,
+        amount: amount.toFixed(2),
+        currency: 'PHP',
+        transactionAt: toIsoDate(form.transactionAt),
+      },
+      {
+        onSuccess: () => {
+          toast.success(`${title} added to activity.`)
+          setForm((current) => ({ ...DEFAULT_FORM, type: current.type, transactionAt: current.transactionAt }))
+          setShowComposer(false)
+        },
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : 'Could not create transaction.')
+        },
+      }
+    )
+  }
 
   return (
     <>
-      <DashboardHeaderShell innerClassName="px-6 pb-4 pt-6 md:px-8 md:pb-5">
+      <DashboardHeaderShell>
         <AppPageHeader
           eyebrow="Transaction history"
           title="Activity"
           subtitle="Review your income and expenses. Track where every penny goes."
           inverted
         />
-
-        <div className="mt-6 flex flex-row gap-1 rounded-2xl bg-[#131b17] p-1.5">
-          <button
-            onClick={() => setActiveTab('All')}
-            className={`flex-1 rounded-[12px] py-2 text-[13px] font-bold transition-all ${
-              activeTab === 'All' ? 'bg-[#1a2c1f] text-[#8bff62] shadow-sm' : 'text-[#73827a]'
-            }`}
-          >
-            History
-          </button>
-          <button
-            onClick={() => setActiveTab('Recurring')}
-            className={`flex-1 rounded-[12px] py-2 text-[13px] font-bold transition-all ${
-              activeTab === 'Recurring' ? 'bg-[#1a2c1f] text-[#8bff62] shadow-sm' : 'text-[#73827a]'
-            }`}
-          >
-            Planned
-          </button>
-        </div>
       </DashboardHeaderShell>
 
-      <div className="flex flex-col gap-5 px-4 pt-6 md:px-6 lg:px-8 animate-in fade-in duration-500 pb-28">
-        <div className="flex flex-col gap-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-[#4a5650]" />
-            <input
-              type="text"
-              placeholder={`Search ${activeTab.toLowerCase()}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-2xl border border-[#17211c] bg-[#111916] py-3.5 pl-11 pr-4 text-[15px] text-[#f4f7f5] placeholder:text-[#4a5650] focus:border-[#2a3a31] focus:outline-none focus:ring-1 focus:ring-[#2a3a31]"
-            />
-          </div>
-
-          <div className="flex flex-row items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            {TYPE_FILTERS.map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setActiveTypeFilter(filter as TypeFilter)}
-                className="focus:outline-none"
-              >
-                <Pill
-                  label={filter}
-                  variant={activeTypeFilter === filter ? 'selected' : 'default'}
-                  className="cursor-pointer transition-all active:scale-95"
+      <div className="flex flex-col gap-5 px-4 pt-6 pb-28 md:px-6 lg:px-8 animate-in fade-in duration-500">
+        <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-[#4a5650]" />
+                <input
+                  type="text"
+                  placeholder="Search activity..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-2xl border border-[#17211c] bg-[#131b17] py-3.5 pl-11 pr-4 text-[15px] text-[#f4f7f5] placeholder:text-[#4a5650] focus:border-[#2a3a31] focus:outline-none focus:ring-1 focus:ring-[#2a3a31]"
                 />
-              </button>
-            ))}
+              </div>
+
+              <Button onClick={() => setShowComposer((current) => !current)} className="lg:self-stretch">
+                <Plus className="size-4" />
+                {showComposer ? 'Close composer' : 'New transaction'}
+              </Button>
+            </div>
+
+            <div className="flex flex-row items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              {TYPE_FILTERS.map((filter) => (
+                <button key={filter} onClick={() => setActiveTypeFilter(filter as TypeFilter)} className="focus:outline-none">
+                  <Pill
+                    label={filter}
+                    variant={activeTypeFilter === filter ? 'selected' : 'default'}
+                    className="cursor-pointer transition-all active:scale-95"
+                  />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {activeTab === 'All' ? (
-          <div className="flex flex-col gap-6">
-            {transactionsQuery.isLoading ? (
-              <div className="space-y-4">
-                <AccountSkeletonCard />
-                <AccountSkeletonCard />
-                <AccountSkeletonCard />
+        {showComposer ? (
+          <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Quick capture</p>
+                <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">Add a transaction</h2>
               </div>
-            ) : sections.length > 0 ? (
-              sections.map((section) => (
-                <div key={section.title} className="flex flex-col gap-2.5">
-                  <h4 className="px-1 text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
-                    {section.title}
-                  </h4>
-                  <div className="overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
-                    {section.data.map((transaction, index) => (
-                      <TransactionRow
-                        key={transaction.id}
-                        transaction={transaction}
-                        isLast={index === section.data.length - 1}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-[30px] bg-[#0f1512] py-20 px-6 text-center border border-[#17211c]">
-                <div className="flex size-16 items-center justify-center rounded-full bg-[#18221d] mb-5">
-                  <ReceiptText className="size-8 text-[#1b2a21]" />
-                </div>
-                <h4 className="text-[18px] font-bold text-[#f4f7f5]">No history found</h4>
-                <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86] max-w-[240px]">
-                  {searchQuery ? `No matches for &quot;${searchQuery}&quot;` : "You haven't logged any transactions yet."}
-                </p>
+              <div className="rounded-full bg-[#18221d] px-3 py-1 text-[11px] font-bold text-[#8bff62]">
+                Live
               </div>
-            )}
+            </div>
+
+            <div className="mt-6 grid gap-4 xl:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="transaction-type">Type</Label>
+                <select
+                  id="transaction-type"
+                  value={form.type}
+                  onChange={(e) => setForm((current) => ({ ...current, type: e.target.value as CategoryType, categoryId: '' }))}
+                  className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+                >
+                  <option value="EXPENSE">Expense</option>
+                  <option value="INCOME">Income</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="transaction-date">Date</Label>
+                <Input id="transaction-date" type="date" value={form.transactionAt} onChange={(e) => setForm((current) => ({ ...current, transactionAt: e.target.value }))} />
+              </div>
+
+              <div className="space-y-2 xl:col-span-2">
+                <Label htmlFor="transaction-title">Title</Label>
+                <Input id="transaction-title" value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} placeholder="e.g. Groceries, Salary, Internet bill" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="transaction-amount">Amount</Label>
+                <Input id="transaction-amount" type="number" value={form.amount} onChange={(e) => setForm((current) => ({ ...current, amount: e.target.value }))} placeholder="0.00" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="transaction-account">Account</Label>
+                <select
+                  id="transaction-account"
+                  value={form.accountId}
+                  onChange={(e) => setForm((current) => ({ ...current, accountId: e.target.value }))}
+                  className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+                >
+                  <option value="">Optional account</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>{account.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="transaction-category">Category</Label>
+                <select
+                  id="transaction-category"
+                  value={form.categoryId}
+                  onChange={(e) => setForm((current) => ({ ...current, categoryId: e.target.value }))}
+                  className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+                >
+                  <option value="">Optional category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2 xl:col-span-2">
+                <Label htmlFor="transaction-notes">Notes</Label>
+                <Input id="transaction-notes" value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} placeholder="Optional note" />
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <Button onClick={handleCreateTransaction} disabled={createTransactionMutation.isPending}>
+                {createTransactionMutation.isPending ? 'Saving...' : 'Save transaction'}
+              </Button>
+              <Button variant="secondary" onClick={() => setShowComposer(false)}>Cancel</Button>
+            </div>
           </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {plannedItemsQuery.isLoading ? (
-              <div className="space-y-4">
-                <AccountSkeletonCard />
-                <AccountSkeletonCard />
-              </div>
-            ) : filteredPlannedItems.length > 0 ? (
-              filteredPlannedItems.map((item) => {
-                const isExpense = item.type === 'EXPENSE'
-                const occurrenceDate = item.nextOccurrenceAt ?? item.startDate
-                const daysUntil = getDaysUntil(occurrenceDate)
-                const showUrgency = daysUntil >= 0 && daysUntil <= 3
+        ) : null}
 
-                return (
-                  <div
-                    key={item.id}
-                    className={cn(
-                      "flex flex-row items-center gap-4 rounded-[28px] border border-[#17211c] bg-[#111916] p-4 transition-colors hover:bg-[#1a2620]",
-                      showUrgency && isExpense && "border-[#331f25] bg-[#161213]"
-                    )}
-                  >
-                    <div className={cn(
-                      "flex size-11 items-center justify-center rounded-[14px]",
-                      isExpense ? "bg-[#241719]" : "bg-[#16211b]"
-                    )}>
-                      {isExpense ? (
-                        <ArrowDownLeft className="size-5 text-[#ff8a94]" />
-                      ) : (
-                        <ArrowUpRight className="size-5 text-[#41d6b2]" />
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-[16px] font-bold text-[#f4f7f5]">{item.title}</p>
-                      <div className="mt-1 flex flex-row items-center gap-2">
-                        <span className="text-[13px] font-medium text-[#6d786f]">
-                          {formatCompactDate(occurrenceDate)}
-                        </span>
-                        {showUrgency && isExpense && (
-                          <span className="text-[11px] font-bold text-[#ff8a94] uppercase tracking-wider">
-                            {daysUntil === 0 ? 'Due today' : `${daysUntil}d left`}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className={cn(
-                      "text-[17px] font-bold",
-                      isExpense ? "text-[#f4f7f5]" : "text-[#41d6b2]"
-                    )}>
-                      {formatCurrency(Number(item.amount), item.currency)}
-                    </p>
-                  </div>
-                )
-              })
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-[30px] bg-[#0f1512] py-20 px-6 text-center border border-[#17211c]">
-                <div className="flex size-16 items-center justify-center rounded-full bg-[#18221d] mb-5">
-                  <Calendar className="size-8 text-[#1b2a21]" />
+        <div className="flex flex-col gap-6">
+          {transactionsQuery.isLoading ? (
+            <div className="space-y-4">
+              <AccountSkeletonCard />
+              <AccountSkeletonCard />
+              <AccountSkeletonCard />
+            </div>
+          ) : sections.length > 0 ? (
+            sections.map((section) => (
+              <div key={section.title} className="flex flex-col gap-2.5">
+                <h4 className="px-1 text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">{section.title}</h4>
+                <div className="overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
+                  {section.data.map((transaction, index) => (
+                    <TransactionRow
+                      key={transaction.id}
+                      transaction={transaction}
+                      isLast={index === section.data.length - 1}
+                      action={
+                        <button
+                          type="button"
+                          onClick={() =>
+                            deleteTransactionMutation.mutate(transaction.id, {
+                              onSuccess: () => toast.success(`${transaction.title} deleted.`),
+                              onError: (error) =>
+                                toast.error(error instanceof Error ? error.message : 'Could not delete transaction.'),
+                            })
+                          }
+                          className="flex size-8 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
+                          aria-label={`Delete ${transaction.title}`}
+                        >
+                          <Trash2 className="size-4 text-[#ff8a94]" />
+                        </button>
+                      }
+                    />
+                  ))}
                 </div>
-                <h4 className="text-[18px] font-bold text-[#f4f7f5]">No planned items</h4>
-                <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86] max-w-[240px]">
-                  Use &quot;Plan ahead&quot; to start tracking recurring bills and income.
-                </p>
               </div>
-            )}
-          </div>
-        )}
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-[30px] bg-[#0f1512] py-20 px-6 text-center border border-[#17211c]">
+              <div className="flex size-16 items-center justify-center rounded-full bg-[#18221d] mb-5">
+                <ReceiptText className="size-8 text-[#1b2a21]" />
+              </div>
+              <h4 className="text-[18px] font-bold text-[#f4f7f5]">No history found</h4>
+              <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86] max-w-[240px]">
+                {searchQuery ? `No matches for "${searchQuery}"` : "You haven't logged any transactions yet."}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-
-      <button className="fixed bottom-32 right-6 size-16 rounded-full bg-[#8bff62] shadow-2xl shadow-[#8bff62]/10 flex items-center justify-center text-[#07110a] hover:scale-105 active:scale-95 transition-transform z-40">
-        <Plus className="size-8" />
-      </button>
     </>
   )
 }

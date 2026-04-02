@@ -7,6 +7,13 @@ export type TransactionSection = {
   data: Transaction[]
 }
 
+export type TransactionMonthOption = {
+  value: string
+  label: string
+  year: number
+  month: number
+}
+
 export function getAccountNetContribution(account: Account) {
   const balance = Number(account.balance)
   return account.type === 'CREDIT_CARD' ? -Math.abs(balance) : balance
@@ -87,11 +94,39 @@ export function getCurrentMonthBounds() {
   }
 }
 
+export function getTransactionMonthOptions(transactions: Transaction[]): TransactionMonthOption[] {
+  const formatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' })
+  const keys = new Set<string>()
+
+  for (const transaction of transactions) {
+    const date = new Date(transaction.transactionAt)
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    keys.add(`${year}-${String(month + 1).padStart(2, '0')}`)
+  }
+
+  return Array.from(keys)
+    .sort((a, b) => b.localeCompare(a))
+    .map((key) => {
+      const [yearString, monthString] = key.split('-')
+      const year = Number(yearString)
+      const month = Number(monthString) - 1
+
+      return {
+        value: key,
+        label: formatter.format(new Date(year, month, 1)),
+        year,
+        month,
+      }
+    })
+}
+
 export function buildMonthlyExpenseDistribution(
   transactions: Transaction[],
-  expenseCategories: Category[]
+  expenseCategories: Category[],
+  selectedPeriod?: { year: number; month: number }
 ) {
-  const { year, month } = getCurrentMonthBounds()
+  const { year, month } = selectedPeriod ?? getCurrentMonthBounds()
   const monthTransactions = transactions.filter((transaction) => {
     const date = new Date(transaction.transactionAt)
     return date.getFullYear() === year && date.getMonth() === month
@@ -143,6 +178,8 @@ export function buildMonthlyExpenseDistribution(
   const topCategory = distributionRows[0]
 
   return {
+    year,
+    month,
     monthExpenses,
     monthIncome,
     distributionRows,

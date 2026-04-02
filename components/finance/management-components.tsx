@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { Badge, Pill } from '@/components/ui/pill'
 import { Button } from '@/components/ui/button'
 import { formatCompactDate, formatCurrency } from '@/lib/formatters'
@@ -94,7 +95,15 @@ function formatRecurrenceLabel(item: PlannedItem) {
   return item.recurrence
 }
 
-export function PlannedItemRow({ item, isLast }: { item: PlannedItem; isLast?: boolean }) {
+export function PlannedItemRow({
+  item,
+  isLast,
+  action,
+}: {
+  item: PlannedItem
+  isLast?: boolean
+  action?: ReactNode
+}) {
   const isExpense = item.type === 'EXPENSE'
 
   return (
@@ -119,10 +128,13 @@ export function PlannedItemRow({ item, isLast }: { item: PlannedItem; isLast?: b
           <span>{formatRecurrenceLabel(item)}</span>
         </div>
       </div>
-      <p className={cn('text-[15px] font-bold', isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]')}>
-        {isExpense ? '-' : '+'}
-        {formatCurrency(Number(item.amount), item.currency)}
-      </p>
+      <div className="flex items-center gap-3">
+        <p className={cn('text-[15px] font-bold', isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]')}>
+          {isExpense ? '-' : '+'}
+          {formatCurrency(Number(item.amount), item.currency)}
+        </p>
+        {action}
+      </div>
     </div>
   )
 }

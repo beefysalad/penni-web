@@ -1,0 +1,59 @@
+import api from '@/lib/axios'
+import type { CategoryType, PlannedItem, RecurrenceFrequency } from '@/lib/finance.types'
+
+export type ListPlannedItemsParams = {
+  type?: CategoryType
+  accountId?: string
+  categoryId?: string
+  isActive?: boolean
+}
+
+export type CreatePlannedItemInput = {
+  accountId?: string
+  categoryId?: string
+  type: CategoryType
+  title: string
+  notes?: string
+  amount: string
+  currency: string
+  startDate: string
+  recurrence: RecurrenceFrequency
+  semiMonthlyDays?: number[]
+  isActive?: boolean
+}
+
+export async function listPlannedItems(token: string, params?: ListPlannedItemsParams) {
+  const response = await api.get<PlannedItem[]>('/planned-items', {
+    params,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+  })
+
+  return response.data
+}
+
+export async function createPlannedItem(token: string, input: CreatePlannedItemInput) {
+  const response = await api.post<PlannedItem>('/planned-items', input, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+  })
+
+  return response.data
+}
+
+export async function deletePlannedItem(token: string, id: string) {
+  const response = await api.delete<PlannedItem>(`/planned-items/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  })
+
+  return response.data
+}

@@ -489,7 +489,7 @@ export function BudgetsSection({
       </div>
 
       <Link
-        href="/dashboard/stats"
+        href="/dashboard/budgets"
         className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#131b17] px-5 py-2.5 transition-colors hover:bg-[#1a2620]"
       >
         <span className="text-[12px] font-bold text-[#dce2de]">View all</span>

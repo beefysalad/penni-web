@@ -28,9 +28,10 @@ interface SettingsRowProps {
   onClick?: () => void
   isLast?: boolean
   destructive?: boolean
+  as?: 'button' | 'div'
 }
 
-function SettingsRow({ icon: Icon, label, value, href, onClick, isLast, destructive }: SettingsRowProps) {
+function SettingsRow({ icon: Icon, label, value, href, onClick, isLast, destructive, as = 'button' }: SettingsRowProps) {
   const content = (
     <div className={cn(
       "flex flex-row items-center gap-4 px-4 py-4 transition-colors hover:bg-white/5",
@@ -55,7 +56,8 @@ function SettingsRow({ icon: Icon, label, value, href, onClick, isLast, destruct
   )
 
   if (href) return <Link href={href} className="block">{content}</Link>
-  return <button onClick={onClick} className="w-full text-left">{content}</button>
+  const Component = as
+  return <Component onClick={onClick} className="w-full text-left">{content}</Component>
 }
 
 export default function SettingsPage() {
@@ -68,6 +70,7 @@ export default function SettingsPage() {
         { icon: Wallet, label: 'Linked Accounts', value: '3 linked', href: '/dashboard/accounts' },
         { icon: Tag, label: 'Categories', value: 'Manage labels', href: '/dashboard/categories' },
         { icon: Sparkles, label: 'Planned Items', href: '/dashboard/planned-items' },
+        { icon: Wallet, label: 'Budgets', value: 'Manage limits', href: '/dashboard/budgets' },
       ]
     },
     {
@@ -153,14 +156,15 @@ export default function SettingsPage() {
           </h4>
           <div className="overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
             <SignOutButton>
-              <button className="w-full">
+              <div className="w-full cursor-pointer">
                 <SettingsRow
                   icon={LogOut}
                   label="Sign Out"
                   isLast={true}
                   destructive={true}
+                  as="div"
                 />
-              </button>
+              </div>
             </SignOutButton>
           </div>
         </div>

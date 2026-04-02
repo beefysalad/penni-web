@@ -1,24 +1,25 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FrontendOnlyBadge, CategoryRow, FinanceEmptyState, CreationHint } from '@/components/finance/management-components'
-import { useCategoriesQuery } from '@/hooks/use-finance-queries'
-import type { Category, CategoryType } from '@/lib/finance.types'
+import { CategoryRow, FinanceEmptyState } from '@/components/finance/management-components'
+import { useCategoriesQuery, useCreateCategoryMutation } from '@/hooks/finance/use-categories-query'
+import type { CategoryType } from '@/lib/finance.types'
 import { CATEGORY_COLORS, CATEGORY_TYPES } from '@/lib/constants'
 import { Plus, Tags } from 'lucide-react'
 
-type DraftCategoryForm = {
+type CategoryForm = {
   name: string
   type: CategoryType
   colorHex: string
 }
 
-const DEFAULT_FORM: DraftCategoryForm = {
+const DEFAULT_FORM: CategoryForm = {
   name: '',
   type: 'EXPENSE',
   colorHex: CATEGORY_COLORS[0],
@@ -27,17 +28,13 @@ const DEFAULT_FORM: DraftCategoryForm = {
 export default function CategoriesPage() {
   const expenseCategoriesQuery = useCategoriesQuery('EXPENSE')
   const incomeCategoriesQuery = useCategoriesQuery('INCOME')
+  const createCategoryMutation = useCreateCategoryMutation()
 
-  const [form, setForm] = useState<DraftCategoryForm>(DEFAULT_FORM)
-  const [draftCategories, setDraftCategories] = useState<Category[]>([])
+  const [form, setForm] = useState<CategoryForm>(DEFAULT_FORM)
 
   const categories = useMemo(
-    () => [
-      ...(expenseCategoriesQuery.data ?? []),
-      ...(incomeCategoriesQuery.data ?? []),
-      ...draftCategories,
-    ],
-    [draftCategories, expenseCategoriesQuery.data, incomeCategoriesQuery.data]
+    () => [...(expenseCategoriesQuery.data ?? []), ...(incomeCategoriesQuery.data ?? [])],
+    [expenseCategoriesQuery.data, incomeCategoriesQuery.data]
   )
 
   const expenseCategories = useMemo(
@@ -53,27 +50,30 @@ export default function CategoriesPage() {
 
   const handleCreateCategory = () => {
     const name = form.name.trim()
-    if (!name) return
+    if (!name) {
+      toast.error('Category name is required.')
+      return
+    }
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-    const timestamp = new Date().toISOString()
 
-    setDraftCategories((current) => [
+    createCategoryMutation.mutate(
       {
-        id: `draft-category-${Date.now()}`,
         name,
         slug: slug || `category-${Date.now()}`,
         type: form.type,
-        icon: null,
         colorHex: form.colorHex,
-        isDefault: false,
-        createdAt: timestamp,
-        updatedAt: timestamp,
       },
-      ...current,
-    ])
-
-    setForm((current) => ({ ...current, name: '', colorHex: CATEGORY_COLORS[0] }))
+      {
+        onSuccess: () => {
+          toast.success(`${name} added to your categories.`)
+          setForm((current) => ({ ...current, name: '', colorHex: CATEGORY_COLORS[0] }))
+        },
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : 'Could not create category.')
+        },
+      }
+    )
   }
 
   return (
@@ -82,7 +82,7 @@ export default function CategoriesPage() {
         <AppPageHeader
           eyebrow="Category manager"
           title="Categories"
-          subtitle="Shape the labels Penni uses for spending and income. Draft new ones here before backend save wiring."
+          subtitle="Create and review the labels Penni uses for spending and income."
           inverted
         />
       </DashboardHeaderShell>
@@ -91,9 +91,9 @@ export default function CategoriesPage() {
         <div className="flex items-center justify-between rounded-[24px] border border-[#17211c] bg-[#111916] px-4 py-3">
           <div>
             <p className="text-[12px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">Finance setup</p>
-            <p className="mt-1 text-[14px] font-medium text-[#93a19a]">Keep category creation in one clear place.</p>
+            <p className="mt-1 text-[14px] font-medium text-[#93a19a]">Create categories here and keep your reporting tidy.</p>
           </div>
-          <FrontendOnlyBadge />
+          <span className="rounded-full bg-[#16211b] px-3 py-1 text-[11px] font-bold text-[#41d6b2]">Live</span>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
@@ -161,18 +161,24 @@ export default function CategoriesPage() {
               </div>
 
               <div className="mt-6 flex gap-3">
-                <Button onClick={handleCreateCategory} className="flex-1">
+                <Button
+                  onClick={handleCreateCategory}
+                  className="flex-1"
+                  disabled={createCategoryMutation.isPending}
+                >
                   <Plus className="size-4" />
-                  Add category
+                  {createCategoryMutation.isPending ? 'Saving...' : 'Add category'}
                 </Button>
               </div>
             </div>
 
-            <CreationHint
-              title="Draft-first for now"
-              description="These categories are wired on the frontend only for this pass, so we can shape the flow and layout before we hook the backend mutation."
-              actionLabel="Save flow comes next"
-            />
+            <div className="rounded-[28px] border border-[#17211c] bg-[#101713] p-5">
+              <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Live create flow</p>
+              <h3 className="mt-2 text-[20px] font-bold tracking-tight text-[#f4f7f5]">Connected to backend</h3>
+              <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86]">
+                This page now uses the real categories endpoint with axios plus TanStack Query, matching the separation we already use on mobile.
+              </p>
+            </div>
           </div>
 
           <div className="space-y-6">

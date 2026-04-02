@@ -11,12 +11,10 @@ import {
   BudgetsSection,
   SkeletonHeroCard 
 } from '@/components/dashboard/home-sections'
-import { 
-  useAccountsQuery, 
-  useTransactionsQuery, 
-  usePlannedItemsQuery, 
-  useBudgetsQuery 
-} from '@/hooks/use-finance-queries'
+import { useAccountsQuery } from '@/hooks/finance/use-accounts-query'
+import { useTransactionsQuery } from '@/hooks/finance/use-transactions-query'
+import { usePlannedItemsQuery } from '@/hooks/finance/use-planned-items-query'
+import { useBudgetsQuery } from '@/hooks/finance/use-budgets-query'
 import { 
   getGreeting, 
   getNextPlannedItem, 
@@ -29,7 +27,7 @@ import { getNetWorth } from '@/lib/selectors'
 export default function DashboardPage() {
   const { user } = useUser()
   const accountsQuery = useAccountsQuery()
-  const plannedItemsQuery = usePlannedItemsQuery(true)
+  const plannedItemsQuery = usePlannedItemsQuery({ isActive: true })
   const transactionsQuery = useTransactionsQuery()
   const budgetsQuery = useBudgetsQuery()
 

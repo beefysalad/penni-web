@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { ACCOUNT_TYPE_META } from '@/lib/constants'
 import { formatCurrency, formatDueDayOfMonth, formatShortDate } from '@/lib/formatters'
@@ -15,7 +16,7 @@ import type { Account, Transaction } from '@/lib/finance.types'
 
 // --- Account Card ---
 
-export function AccountCard({ account }: { account: Account }) {
+export function AccountCard({ account, action }: { account: Account; action?: ReactNode }) {
   const meta = ACCOUNT_TYPE_META[account.type]
   const TypeIcon = meta.icon
   const isCreditCard = account.type === 'CREDIT_CARD'
@@ -28,7 +29,7 @@ export function AccountCard({ account }: { account: Account }) {
       whileHover={{ scale: 1.01 }}
       className="rounded-[28px] border border-[#1b2a21]/60 bg-[#111916] p-5 transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
     >
-      <div className="flex flex-row items-center justify-between">
+      <div className="flex flex-row items-center justify-between gap-4">
         <div className="flex flex-1 flex-row items-center gap-4">
           <div className={cn('flex size-12 items-center justify-center rounded-2xl', meta.iconWrapClassName)}>
             <TypeIcon className="size-6" style={{ color: meta.accentColor }} />
@@ -47,7 +48,9 @@ export function AccountCard({ account }: { account: Account }) {
           </div>
         </div>
 
-        <div className="flex flex-col items-end">
+        <div className="flex items-start gap-3">
+          {action}
+          <div className="flex flex-col items-end">
           <p className={cn('text-xl font-bold tracking-tight', Number(account.balance) < 0 ? 'text-[#ff8a94]' : 'text-[#f4f7f5]')}>
             {formatCurrency(Number(account.balance), account.currency)}
           </p>
@@ -56,6 +59,7 @@ export function AccountCard({ account }: { account: Account }) {
               {account.institutionName}
             </p>
           )}
+        </div>
         </div>
       </div>
 
@@ -101,7 +105,15 @@ export function AccountCard({ account }: { account: Account }) {
 
 // --- Transaction Row ---
 
-export function TransactionRow({ transaction, isLast }: { transaction: Transaction; isLast?: boolean }) {
+export function TransactionRow({
+  transaction,
+  isLast,
+  action,
+}: {
+  transaction: Transaction
+  isLast?: boolean
+  action?: ReactNode
+}) {
   const isExpense = transaction.type === 'EXPENSE'
   const sign = isExpense ? '-' : '+'
   const amountColor = isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]'
@@ -130,9 +142,12 @@ export function TransactionRow({ transaction, isLast }: { transaction: Transacti
           </div>
         </div>
 
-        <p className={cn('text-[17px] font-bold', amountColor)}>
-          {sign}{formatCurrency(Number(transaction.amount), transaction.currency)}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className={cn('text-[17px] font-bold', amountColor)}>
+            {sign}{formatCurrency(Number(transaction.amount), transaction.currency)}
+          </p>
+          {action}
+        </div>
       </div>
 
       {transaction.notes && (
