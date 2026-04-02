@@ -8,6 +8,7 @@ import { TransactionRow, AccountSkeletonCard } from '@/components/finance/financ
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MobileSheet } from '@/components/ui/mobile-sheet'
 import { Pill } from '@/components/ui/pill'
 import { cn } from '@/lib/utils'
 import { useTransactionsQuery, useCreateTransactionMutation, useDeleteTransactionMutation } from '@/hooks/finance/use-transactions-query'
@@ -122,6 +123,92 @@ export default function ActivityPage() {
     )
   }
 
+  const composerContent = (
+    <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Quick capture</p>
+          <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">Add a transaction</h2>
+        </div>
+        <div className="rounded-full bg-[#18221d] px-3 py-1 text-[11px] font-bold text-[#8bff62]">
+          Live
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 xl:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="transaction-type">Type</Label>
+          <select
+            id="transaction-type"
+            value={form.type}
+            onChange={(e) => setForm((current) => ({ ...current, type: e.target.value as CategoryType, categoryId: '' }))}
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+          >
+            <option value="EXPENSE">Expense</option>
+            <option value="INCOME">Income</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="transaction-date">Date</Label>
+          <Input id="transaction-date" type="date" value={form.transactionAt} onChange={(e) => setForm((current) => ({ ...current, transactionAt: e.target.value }))} />
+        </div>
+
+        <div className="space-y-2 xl:col-span-2">
+          <Label htmlFor="transaction-title">Title</Label>
+          <Input id="transaction-title" value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} placeholder="e.g. Groceries, Salary, Internet bill" />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="transaction-amount">Amount</Label>
+          <Input id="transaction-amount" type="number" value={form.amount} onChange={(e) => setForm((current) => ({ ...current, amount: e.target.value }))} placeholder="0.00" />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="transaction-account">Account</Label>
+          <select
+            id="transaction-account"
+            value={form.accountId}
+            onChange={(e) => setForm((current) => ({ ...current, accountId: e.target.value }))}
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+          >
+            <option value="">Optional account</option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>{account.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="transaction-category">Category</Label>
+          <select
+            id="transaction-category"
+            value={form.categoryId}
+            onChange={(e) => setForm((current) => ({ ...current, categoryId: e.target.value }))}
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+          >
+            <option value="">Optional category</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>{category.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2 xl:col-span-2">
+          <Label htmlFor="transaction-notes">Notes</Label>
+          <Input id="transaction-notes" value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} placeholder="Optional note" />
+        </div>
+      </div>
+
+      <div className="mt-6 flex gap-3">
+        <Button onClick={handleCreateTransaction} disabled={createTransactionMutation.isPending}>
+          {createTransactionMutation.isPending ? 'Saving...' : 'Save transaction'}
+        </Button>
+        <Button variant="secondary" onClick={() => setShowComposer(false)}>Cancel</Button>
+      </div>
+    </div>
+  )
+
   return (
     <>
       <DashboardHeaderShell>
@@ -230,91 +317,7 @@ export default function ActivityPage() {
           </div>
         </div>
 
-        {showComposer ? (
-          <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Quick capture</p>
-                <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">Add a transaction</h2>
-              </div>
-              <div className="rounded-full bg-[#18221d] px-3 py-1 text-[11px] font-bold text-[#8bff62]">
-                Live
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 xl:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="transaction-type">Type</Label>
-                <select
-                  id="transaction-type"
-                  value={form.type}
-                  onChange={(e) => setForm((current) => ({ ...current, type: e.target.value as CategoryType, categoryId: '' }))}
-                  className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
-                >
-                  <option value="EXPENSE">Expense</option>
-                  <option value="INCOME">Income</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="transaction-date">Date</Label>
-                <Input id="transaction-date" type="date" value={form.transactionAt} onChange={(e) => setForm((current) => ({ ...current, transactionAt: e.target.value }))} />
-              </div>
-
-              <div className="space-y-2 xl:col-span-2">
-                <Label htmlFor="transaction-title">Title</Label>
-                <Input id="transaction-title" value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} placeholder="e.g. Groceries, Salary, Internet bill" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="transaction-amount">Amount</Label>
-                <Input id="transaction-amount" type="number" value={form.amount} onChange={(e) => setForm((current) => ({ ...current, amount: e.target.value }))} placeholder="0.00" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="transaction-account">Account</Label>
-                <select
-                  id="transaction-account"
-                  value={form.accountId}
-                  onChange={(e) => setForm((current) => ({ ...current, accountId: e.target.value }))}
-                  className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
-                >
-                  <option value="">Optional account</option>
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>{account.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="transaction-category">Category</Label>
-                <select
-                  id="transaction-category"
-                  value={form.categoryId}
-                  onChange={(e) => setForm((current) => ({ ...current, categoryId: e.target.value }))}
-                  className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
-                >
-                  <option value="">Optional category</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2 xl:col-span-2">
-                <Label htmlFor="transaction-notes">Notes</Label>
-                <Input id="transaction-notes" value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} placeholder="Optional note" />
-              </div>
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <Button onClick={handleCreateTransaction} disabled={createTransactionMutation.isPending}>
-                {createTransactionMutation.isPending ? 'Saving...' : 'Save transaction'}
-              </Button>
-              <Button variant="secondary" onClick={() => setShowComposer(false)}>Cancel</Button>
-            </div>
-          </div>
-        ) : null}
+        {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}
 
         <div className="flex flex-col gap-6">
           {transactionsQuery.isLoading ? (
@@ -367,6 +370,15 @@ export default function ActivityPage() {
           )}
         </div>
       </div>
+
+      <MobileSheet
+        open={showComposer}
+        onClose={() => setShowComposer(false)}
+        title="New transaction"
+        description="Capture an entry without leaving the feed."
+      >
+        {composerContent}
+      </MobileSheet>
     </>
   )
 }

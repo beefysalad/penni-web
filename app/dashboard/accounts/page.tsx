@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Pill } from '@/components/ui/pill'
 import { Label } from '@/components/ui/label'
+import { MobileSheet } from '@/components/ui/mobile-sheet'
 import {
   useAccountsQuery,
   useCreateAccountMutation,
@@ -147,6 +148,142 @@ export default function AccountsPage() {
     })
   }
 
+  const composerContent = (
+    <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
+            {editingAccountId ? 'Edit account' : 'Add account'}
+          </p>
+          <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
+            {editingAccountId ? 'Update this wallet' : 'Create a new wallet'}
+          </h2>
+          <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86]">
+            Credit cards keep their limit fields here too, like in mobile.
+          </p>
+        </div>
+        <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
+          <WalletCards className="size-5 text-[#8bff62]" />
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 xl:grid-cols-2">
+        <div className="space-y-2 xl:col-span-2">
+          <Label htmlFor="account-name">Account name</Label>
+          <Input
+            id="account-name"
+            value={form.name}
+            onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))}
+            placeholder="e.g. BDO Savings, GCash, Maya"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="account-type">Type</Label>
+          <select
+            id="account-type"
+            value={form.type}
+            onChange={(e) => setForm((c) => ({ ...c, type: e.target.value as AccountType }))}
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+          >
+            {ACCOUNT_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="account-currency">Currency</Label>
+          <select
+            id="account-currency"
+            value={form.currency}
+            onChange={(e) => setForm((c) => ({ ...c, currency: e.target.value }))}
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+          >
+            {ACCOUNT_CURRENCY_OPTIONS.map((currency) => (
+              <option key={currency} value={currency}>
+                {currency}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2 xl:col-span-2">
+          <Label htmlFor="account-institution">Institution</Label>
+          <Input
+            id="account-institution"
+            value={form.institutionName}
+            onChange={(e) => setForm((c) => ({ ...c, institutionName: e.target.value }))}
+            placeholder="e.g. BDO, UnionBank, Maya"
+          />
+        </div>
+
+        {isCreditCard ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="account-limit">Credit limit</Label>
+              <Input
+                id="account-limit"
+                type="number"
+                value={form.creditLimit}
+                onChange={(e) => setForm((c) => ({ ...c, creditLimit: e.target.value }))}
+                placeholder="20000.00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="account-available">Available credit</Label>
+              <Input
+                id="account-available"
+                type="number"
+                value={form.availableCredit}
+                onChange={(e) => setForm((c) => ({ ...c, availableCredit: e.target.value }))}
+                placeholder="16900.00"
+              />
+            </div>
+            <div className="space-y-2 xl:col-span-2">
+              <Label htmlFor="account-due">Due day</Label>
+              <Input
+                id="account-due"
+                type="number"
+                min="1"
+                max="31"
+                value={form.dueDayOfMonth}
+                onChange={(e) => setForm((c) => ({ ...c, dueDayOfMonth: e.target.value }))}
+                placeholder="16"
+              />
+            </div>
+          </>
+        ) : (
+          <div className="space-y-2 xl:col-span-2">
+            <Label htmlFor="account-balance">Starting balance</Label>
+            <Input
+              id="account-balance"
+              type="number"
+              value={form.balance}
+              onChange={(e) => setForm((c) => ({ ...c, balance: e.target.value }))}
+              placeholder="25000.00"
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6 flex gap-3">
+        <Button
+          onClick={handleSubmit}
+          className="flex-1"
+          disabled={createAccountMutation.isPending || updateAccountMutation.isPending}
+        >
+          {editingAccountId ? 'Save changes' : 'Add account'}
+        </Button>
+        <Button variant="secondary" onClick={resetForm}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
     <>
       <DashboardHeaderShell>
@@ -182,141 +319,7 @@ export default function AccountsPage() {
           </div>
         </div>
 
-        {showComposer ? (
-          <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
-                  {editingAccountId ? 'Edit account' : 'Add account'}
-                </p>
-                <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
-                  {editingAccountId ? 'Update this wallet' : 'Create a new wallet'}
-                </h2>
-                <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86]">
-                  Credit cards keep their limit fields here too, like in mobile.
-                </p>
-              </div>
-              <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
-                <WalletCards className="size-5 text-[#8bff62]" />
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 xl:grid-cols-2">
-              <div className="space-y-2 xl:col-span-2">
-                <Label htmlFor="account-name">Account name</Label>
-                <Input
-                  id="account-name"
-                  value={form.name}
-                  onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))}
-                  placeholder="e.g. BDO Savings, GCash, Maya"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="account-type">Type</Label>
-                <select
-                  id="account-type"
-                  value={form.type}
-                  onChange={(e) => setForm((c) => ({ ...c, type: e.target.value as AccountType }))}
-                  className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
-                >
-                  {ACCOUNT_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="account-currency">Currency</Label>
-                <select
-                  id="account-currency"
-                  value={form.currency}
-                  onChange={(e) => setForm((c) => ({ ...c, currency: e.target.value }))}
-                  className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
-                >
-                  {ACCOUNT_CURRENCY_OPTIONS.map((currency) => (
-                    <option key={currency} value={currency}>
-                      {currency}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2 xl:col-span-2">
-                <Label htmlFor="account-institution">Institution</Label>
-                <Input
-                  id="account-institution"
-                  value={form.institutionName}
-                  onChange={(e) => setForm((c) => ({ ...c, institutionName: e.target.value }))}
-                  placeholder="e.g. BDO, UnionBank, Maya"
-                />
-              </div>
-
-              {isCreditCard ? (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="account-limit">Credit limit</Label>
-                    <Input
-                      id="account-limit"
-                      type="number"
-                      value={form.creditLimit}
-                      onChange={(e) => setForm((c) => ({ ...c, creditLimit: e.target.value }))}
-                      placeholder="20000.00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="account-available">Available credit</Label>
-                    <Input
-                      id="account-available"
-                      type="number"
-                      value={form.availableCredit}
-                      onChange={(e) => setForm((c) => ({ ...c, availableCredit: e.target.value }))}
-                      placeholder="16900.00"
-                    />
-                  </div>
-                  <div className="space-y-2 xl:col-span-2">
-                    <Label htmlFor="account-due">Due day</Label>
-                    <Input
-                      id="account-due"
-                      type="number"
-                      min="1"
-                      max="31"
-                      value={form.dueDayOfMonth}
-                      onChange={(e) => setForm((c) => ({ ...c, dueDayOfMonth: e.target.value }))}
-                      placeholder="16"
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="account-balance">Starting balance</Label>
-                  <Input
-                    id="account-balance"
-                    type="number"
-                    value={form.balance}
-                    onChange={(e) => setForm((c) => ({ ...c, balance: e.target.value }))}
-                    placeholder="25000.00"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <Button
-                onClick={handleSubmit}
-                className="flex-1"
-                disabled={createAccountMutation.isPending || updateAccountMutation.isPending}
-              >
-                {editingAccountId ? 'Save changes' : 'Add account'}
-              </Button>
-              <Button variant="secondary" onClick={resetForm}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : null}
+        {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-row items-center gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -387,6 +390,15 @@ export default function AccountsPage() {
           </div>
         </div>
       </div>
+
+      <MobileSheet
+        open={showComposer}
+        onClose={resetForm}
+        title={editingAccountId ? 'Edit account' : 'New account'}
+        description="Manage wallets, balances, and credit limits without leaving the page."
+      >
+        {composerContent}
+      </MobileSheet>
     </>
   )
 }

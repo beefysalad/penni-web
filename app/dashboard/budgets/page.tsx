@@ -7,6 +7,7 @@ import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-s
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MobileSheet } from '@/components/ui/mobile-sheet'
 import { useBudgetsQuery, useCreateBudgetMutation, useDeleteBudgetMutation, useUpdateBudgetMutation } from '@/hooks/finance/use-budgets-query'
 import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { useTransactionsQuery } from '@/hooks/finance/use-transactions-query'
@@ -61,6 +62,7 @@ export default function BudgetsPage() {
   const deleteBudgetMutation = useDeleteBudgetMutation()
 
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null)
+  const [showComposer, setShowComposer] = useState(false)
   const [form, setForm] = useState<BudgetForm>(DEFAULT_FORM)
 
   const budgets = budgetsQuery.data ?? []
@@ -76,6 +78,7 @@ export default function BudgetsPage() {
   const resetForm = () => {
     setEditingBudgetId(null)
     setForm(DEFAULT_FORM)
+    setShowComposer(false)
   }
 
   const handleSubmit = () => {
@@ -118,6 +121,80 @@ export default function BudgetsPage() {
     })
   }
 
+  const composerContent = (
+    <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
+            {editingBudgetId ? 'Edit budget' : 'Create budget'}
+          </p>
+          <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
+            {editingBudgetId ? 'Adjust this limit' : 'Set a spending guardrail'}
+          </h2>
+        </div>
+        <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
+          <Goal className="size-5 text-[#ffc857]" />
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="budget-name">Budget name</Label>
+          <Input id="budget-name" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} placeholder="e.g. Food, Shopping, Family" />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="budget-category">Expense category</Label>
+          <select
+            id="budget-category"
+            value={form.categoryId}
+            onChange={(e) => setForm((c) => ({ ...c, categoryId: e.target.value }))}
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+          >
+            <option value="">Optional category</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>{category.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="budget-amount">Amount</Label>
+            <Input id="budget-amount" type="number" value={form.amount} onChange={(e) => setForm((c) => ({ ...c, amount: e.target.value }))} placeholder="5000.00" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="budget-alert">Alert threshold</Label>
+            <Input id="budget-alert" type="number" min="1" max="100" value={form.alertThreshold} onChange={(e) => setForm((c) => ({ ...c, alertThreshold: e.target.value }))} placeholder="80" />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="budget-start">Period start</Label>
+            <Input id="budget-start" type="date" value={form.periodStart} onChange={(e) => setForm((c) => ({ ...c, periodStart: e.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="budget-end">Period end</Label>
+            <Input id="budget-end" type="date" value={form.periodEnd} onChange={(e) => setForm((c) => ({ ...c, periodEnd: e.target.value }))} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 flex gap-3">
+        <Button
+          onClick={handleSubmit}
+          className="flex-1"
+          disabled={createBudgetMutation.isPending || updateBudgetMutation.isPending}
+        >
+          <Plus className="size-4" />
+          {editingBudgetId ? 'Save budget' : 'Create budget'}
+        </Button>
+        <Button variant="secondary" onClick={resetForm}>Cancel</Button>
+      </div>
+    </div>
+  )
+
   return (
     <>
       <DashboardHeaderShell>
@@ -130,80 +207,25 @@ export default function BudgetsPage() {
       </DashboardHeaderShell>
 
       <div className="flex flex-col gap-6 px-4 pb-28 pt-6 md:px-6 lg:px-8">
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-          <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
-                  {editingBudgetId ? 'Edit budget' : 'Create budget'}
-                </p>
-                <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
-                  {editingBudgetId ? 'Adjust this limit' : 'Set a spending guardrail'}
-                </h2>
-              </div>
-              <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
-                <Goal className="size-5 text-[#ffc857]" />
-              </div>
+        <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-[12px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">
+                Guardrails
+              </p>
+              <p className="mt-1 text-[14px] font-medium text-[#93a19a]">
+                Open the composer only when you need to add or adjust a budget.
+              </p>
             </div>
-
-            <div className="mt-6 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="budget-name">Budget name</Label>
-                <Input id="budget-name" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} placeholder="e.g. Food, Shopping, Family" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="budget-category">Expense category</Label>
-                <select
-                  id="budget-category"
-                  value={form.categoryId}
-                  onChange={(e) => setForm((c) => ({ ...c, categoryId: e.target.value }))}
-                  className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
-                >
-                  <option value="">Optional category</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="budget-amount">Amount</Label>
-                  <Input id="budget-amount" type="number" value={form.amount} onChange={(e) => setForm((c) => ({ ...c, amount: e.target.value }))} placeholder="5000.00" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="budget-alert">Alert threshold</Label>
-                  <Input id="budget-alert" type="number" min="1" max="100" value={form.alertThreshold} onChange={(e) => setForm((c) => ({ ...c, alertThreshold: e.target.value }))} placeholder="80" />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="budget-start">Period start</Label>
-                  <Input id="budget-start" type="date" value={form.periodStart} onChange={(e) => setForm((c) => ({ ...c, periodStart: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="budget-end">Period end</Label>
-                  <Input id="budget-end" type="date" value={form.periodEnd} onChange={(e) => setForm((c) => ({ ...c, periodEnd: e.target.value }))} />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <Button
-                onClick={handleSubmit}
-                className="flex-1"
-                disabled={createBudgetMutation.isPending || updateBudgetMutation.isPending}
-              >
-                <Plus className="size-4" />
-                {editingBudgetId ? 'Save budget' : 'Create budget'}
-              </Button>
-              {editingBudgetId ? (
-                <Button variant="secondary" onClick={resetForm}>Cancel</Button>
-              ) : null}
-            </div>
+            <Button onClick={() => setShowComposer((current) => !current)} className="lg:self-stretch">
+              <Plus className="size-4" />
+              {showComposer ? 'Close composer' : 'New budget'}
+            </Button>
           </div>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+          {showComposer ? <div className="hidden xl:block">{composerContent}</div> : <div className="hidden xl:block" />}
 
           <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
             <div className="flex items-start justify-between gap-4">
@@ -285,6 +307,15 @@ export default function BudgetsPage() {
           </div>
         </div>
       </div>
+
+      <MobileSheet
+        open={showComposer}
+        onClose={resetForm}
+        title={editingBudgetId ? 'Edit budget' : 'New budget'}
+        description="Create or adjust a budget from mobile web without opening a long inline panel."
+      >
+        {composerContent}
+      </MobileSheet>
     </>
   )
 }

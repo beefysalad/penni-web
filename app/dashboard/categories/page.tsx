@@ -7,6 +7,7 @@ import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-s
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MobileSheet } from '@/components/ui/mobile-sheet'
 import { CategoryRow, FinanceEmptyState } from '@/components/finance/management-components'
 import { useCategoriesQuery, useCreateCategoryMutation } from '@/hooks/finance/use-categories-query'
 import type { CategoryType } from '@/lib/finance.types'
@@ -30,6 +31,7 @@ export default function CategoriesPage() {
   const incomeCategoriesQuery = useCategoriesQuery('INCOME')
   const createCategoryMutation = useCreateCategoryMutation()
 
+  const [showComposer, setShowComposer] = useState(false)
   const [form, setForm] = useState<CategoryForm>(DEFAULT_FORM)
 
   const categories = useMemo(
@@ -68,6 +70,7 @@ export default function CategoriesPage() {
         onSuccess: () => {
           toast.success(`${name} added to your categories.`)
           setForm((current) => ({ ...current, name: '', colorHex: CATEGORY_COLORS[0] }))
+          setShowComposer(false)
         },
         onError: (error) => {
           toast.error(error instanceof Error ? error.message : 'Could not create category.')
@@ -75,6 +78,85 @@ export default function CategoriesPage() {
       }
     )
   }
+
+  const composerContent = (
+    <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Create category</p>
+          <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">Add a new label</h2>
+          <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86]">
+            Keep the naming clean so stats and AI insights stay readable later.
+          </p>
+        </div>
+        <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
+          <Tags className="size-5 text-[#8bff62]" />
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="category-name">Category name</Label>
+          <Input
+            id="category-name"
+            value={form.name}
+            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+            placeholder={form.type === 'EXPENSE' ? 'e.g. Food, Bills, Shopping' : 'e.g. Salary, Freelance'}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="category-type">Type</Label>
+          <select
+            id="category-type"
+            value={form.type}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, type: event.target.value as CategoryType }))
+            }
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+          >
+            {CATEGORY_TYPES.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Accent color</Label>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORY_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => setForm((current) => ({ ...current, colorHex: color }))}
+                className={`size-10 rounded-full border-2 transition ${
+                  form.colorHex === color ? 'border-white/70 scale-105' : 'border-transparent'
+                }`}
+                style={{ backgroundColor: color }}
+                aria-label={`Use ${color} as category color`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 flex gap-3">
+        <Button
+          onClick={handleCreateCategory}
+          className="flex-1"
+          disabled={createCategoryMutation.isPending}
+        >
+          <Plus className="size-4" />
+          {createCategoryMutation.isPending ? 'Saving...' : 'Add category'}
+        </Button>
+        <Button variant="secondary" onClick={() => setShowComposer(false)}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  )
 
   return (
     <>
@@ -93,84 +175,18 @@ export default function CategoriesPage() {
             <p className="text-[12px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">Finance setup</p>
             <p className="mt-1 text-[14px] font-medium text-[#93a19a]">Create categories here and keep your reporting tidy.</p>
           </div>
-          <span className="rounded-full bg-[#16211b] px-3 py-1 text-[11px] font-bold text-[#41d6b2]">Live</span>
+          <div className="flex items-center gap-3">
+            <span className="hidden rounded-full bg-[#16211b] px-3 py-1 text-[11px] font-bold text-[#41d6b2] sm:inline-flex">Live</span>
+            <Button onClick={() => setShowComposer((current) => !current)}>
+              <Plus className="size-4" />
+              {showComposer ? 'Close composer' : 'New category'}
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
           <div className="space-y-6">
-            <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Create category</p>
-                  <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">Add a new label</h2>
-                  <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86]">
-                    Keep the naming clean so stats and AI insights stay readable later.
-                  </p>
-                </div>
-                <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
-                  <Tags className="size-5 text-[#8bff62]" />
-                </div>
-              </div>
-
-              <div className="mt-6 space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="category-name">Category name</Label>
-                  <Input
-                    id="category-name"
-                    value={form.name}
-                    onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                    placeholder={form.type === 'EXPENSE' ? 'e.g. Food, Bills, Shopping' : 'e.g. Salary, Freelance'}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="category-type">Type</Label>
-                  <select
-                    id="category-type"
-                    value={form.type}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, type: event.target.value as CategoryType }))
-                    }
-                    className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
-                  >
-                    {CATEGORY_TYPES.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-3">
-                  <Label>Accent color</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {CATEGORY_COLORS.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setForm((current) => ({ ...current, colorHex: color }))}
-                        className={`size-10 rounded-full border-2 transition ${
-                          form.colorHex === color ? 'border-white/70 scale-105' : 'border-transparent'
-                        }`}
-                        style={{ backgroundColor: color }}
-                        aria-label={`Use ${color} as category color`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex gap-3">
-                <Button
-                  onClick={handleCreateCategory}
-                  className="flex-1"
-                  disabled={createCategoryMutation.isPending}
-                >
-                  <Plus className="size-4" />
-                  {createCategoryMutation.isPending ? 'Saving...' : 'Add category'}
-                </Button>
-              </div>
-            </div>
+            {showComposer ? <div className="hidden xl:block">{composerContent}</div> : null}
 
             <div className="rounded-[28px] border border-[#17211c] bg-[#101713] p-5">
               <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Live create flow</p>
@@ -251,6 +267,15 @@ export default function CategoriesPage() {
           </div>
         </div>
       </div>
+
+      <MobileSheet
+        open={showComposer}
+        onClose={() => setShowComposer(false)}
+        title="New category"
+        description="Create a category from mobile web without stretching the page."
+      >
+        {composerContent}
+      </MobileSheet>
     </>
   )
 }
