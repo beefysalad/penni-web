@@ -12,6 +12,11 @@ const isAuthRoute = createRouteMatcher(authRoutes)
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, redirectToSignIn } = await auth()
+  const { pathname } = req.nextUrl
+
+  if (userId && pathname === '/') {
+    return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, req.url))
+  }
 
   if (isAuthRoute(req)) {
     if (userId) {
