@@ -4,18 +4,17 @@ This file serves as the primary source of truth for AI agents working on this pr
 
 ## Project Overview
 
-**Name**: Next.js Prisma Boilerplate
-**Description**: A modern full-stack web application boilerplate built with Next.js 16, Prisma ORM, and Tailwind CSS 4.
+**Name**: Penni Web
+**Description**: A Next.js frontend for Penni that uses Clerk on the web and talks to the separate Penni backend API.
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
-- **Database**: PostgreSQL
-- **ORM**: Prisma
 - **Styling**: Tailwind CSS 4
 - **UI Components**: Radix UI + shadcn/ui
-- **Authentication**: Clerk with Google OAuth, email/password, and Prisma user sync
+- **Authentication**: Clerk with Google OAuth and email/password
+- **Backend**: Penni backend API
 - **State Management**: TanStack Query (React Query)
 - **Form Management**: React Hook Form
 - **Validation**: Zod
@@ -30,8 +29,8 @@ This file serves as the primary source of truth for AI agents working on this pr
 │   ├── AUTOMATION.md     # Automation documentation
 │   ├── CODEOWNERS        # Code ownership
 │   └── PULL_REQUEST_TEMPLATE.md
-├── app/                  # Next.js App Router (pages, layouts, api)
-│   ├── api/              # API Routes (including auth)
+├── app/                  # Next.js App Router (pages, layouts)
+│   ├── providers/        # App providers
 │   ├── login/            # Login page route
 │   ├── layout.tsx        # Root layout with providers
 │   └── page.tsx          # Home page
@@ -42,12 +41,8 @@ This file serves as the primary source of truth for AI agents working on this pr
 ├── hooks/                # Custom React Hooks
 ├── lib/                  # Utilities and Libraries
 │   ├── api/              # Client-side API wrappers (Axios)
-│   ├── repositories/     # Object-style data access layers
-│   ├── services/         # Object-style backend service layers
 │   ├── routes.ts         # Route definitions for auth middleware
-│   ├── prisma.ts         # Prisma client singleton
 │   └── utils.ts          # Helper functions (cn, etc.)
-├── prisma/               # Database Schema and Migrations
 ├── proxy.ts              # Next.js 16 middleware (auth route protection)
 └── public/               # Static Assets
 ```
@@ -70,7 +65,7 @@ This file serves as the primary source of truth for AI agents working on this pr
 ### Authentication
 
 - Use **Clerk** for Google OAuth and email/password authentication.
-- Prisma stores the local app user, keyed by `clerkId` and merged by email when appropriate.
+- The backend owns user syncing and persistence.
 - Route protection is handled by `proxy.ts` with Clerk middleware.
 - Protected routes automatically redirect unauthenticated users to `/login`.
 - Auth routes (`/login`, `/register`) automatically redirect authenticated users to `/dashboard`.
@@ -99,19 +94,11 @@ This file serves as the primary source of truth for AI agents working on this pr
 - **Priority Labeling**: Issues are automatically prioritized based on urgency keywords.
 - See `.github/AUTOMATION.md` for full documentation.
 
-## Database
-
-- Schema defined in `prisma/schema.prisma`.
-- Always run `npx prisma generate` after schema changes.
-- Use `npx prisma migrate dev` for migrations.
-
 ## Common Commands
 
 - `npm run dev`: Start development server.
 - `npm run build`: Build for production.
 - `npm run lint`: Run ESLint.
-- `npm run db:seed`: Seed the database.
-- `npx prisma studio`: Open Prisma Studio.
 - `npm run clean`: Clears the repository of sample UI pages (docs, landing, dashboard) and sets up a clean Next.js boilerplate.
 - `npm run restore`: Reverts the `npm run clean` changes and restores the sample pages back into their original locations.
 

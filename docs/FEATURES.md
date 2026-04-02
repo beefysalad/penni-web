@@ -1,22 +1,20 @@
 # Project Features
 
-This document tracks the core features and technologies implemented in the **Next.js Prisma Boilerplate**.
+This document tracks the core features and technologies implemented in **Penni Web**.
 
 ## Core Stack
 
 - **Framework**: [Next.js 16 (App Router)](https://nextjs.org/) - High-performance React framework.
 - **Language**: [TypeScript](https://www.typescriptlang.org/) - Type-safe development.
-- **Database**: [Prisma 7](https://www.prisma.io/) - Modern ORM with PostgreSQL support.
-- **Authentication**: [Clerk](https://clerk.com/) - Hosted authentication with Google OAuth, email/password, middleware protection, and webhooks.
+- **Authentication**: [Clerk](https://clerk.com/) - Hosted authentication with Google OAuth, email/password, and middleware protection.
+- **Backend**: Penni backend API for data, business rules, and persistence.
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) - Utility-first CSS framework with native cascade support.
 - **Components**: [shadcn/ui](https://ui.shadcn.com/) - Beautifully designed components built with Radix UI.
 
 ## Premium Experience
 
 - **Lander**: A modern, high-conversion landing page with interaction-ready elements.
-- **Dashboard Hub**: A clean, high-contrast Zinc console for authenticated users with interactive features:
-  - **Global Visitor Counter**: Real-time counter using TanStack Query with click-to-increment functionality
-  - **User Stats Card**: Displays account information including email and account age
+- **Dashboard Hub**: A clean base for authenticated Penni web experiences.
 - **What's New Modal**: An automated, persistence-aware overlay to announce template updates.
 - **Live Auth Demo**: Interactive section on the landing page to showcase the authentication flow.
 - **Glassmorphic Auth Forms**: Redesigned Login and Register forms with a clean grid and card aesthetic.
@@ -43,8 +41,7 @@ This document tracks the core features and technologies implemented in the **Nex
 
 ## Database & Models
 
-- **Standard Schemas**: Pre-configured `User` and `Count` models, with Clerk identity synced into Prisma.
-- **Database Tools**: Scripts for seeding (`npm run db:seed`) and local management via Prisma Studio.
+- **Frontend-only web app**: The web repo no longer owns Prisma models, migrations, or Postgres.
 
 ---
 

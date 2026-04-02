@@ -1,16 +1,16 @@
-# Nexion - Next.js 16 Boilerplate
+# Penni Web
 
-A modern Next.js 16 boilerplate with Prisma ORM, PostgreSQL, TypeScript, and Tailwind CSS. This project provides a solid foundation for building full-stack web applications with best practices and developer experience in mind.
+Penni Web is the Next.js frontend for Penni. It uses Clerk for web auth and talks to the separate Penni backend API for data and business logic.
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
-- **Database**: PostgreSQL with Prisma ORM
 - **Styling**: Tailwind CSS 4
 - **UI Components**: Radix UI + shadcn/ui
 - **State Management**: TanStack Query (React Query)
 - **Forms**: React Hook Form + Zod
-- **Authentication**: Clerk (Google OAuth + email/password)
+- **Authentication**: Clerk
+- **Backend**: Penni backend API
 - **Theming**: next-themes (Dark Mode)
 - **Language**: TypeScript
 - **Package Manager**: npm
@@ -20,8 +20,8 @@ A modern Next.js 16 boilerplate with Prisma ORM, PostgreSQL, TypeScript, and Tai
 ## Prerequisites
 
 - Node.js 20+
-- PostgreSQL database for local non-Docker development
-- Docker + Docker Compose for the containerized workflow
+- Penni backend running locally or remotely
+- Docker + Docker Compose if you want to run the frontend in a container
 - npm or yarn
 
 ## Installation
@@ -45,26 +45,12 @@ npm install
 cp .env.example .env.local
 ```
 
-4. Configure your database URL and Clerk keys in `.env.local`:
+4. Configure your API base URL and Clerk keys in `.env.local`:
 
 ```
-DATABASE_URL="postgresql://username:password@localhost:5432/your_database"
+NEXT_PUBLIC_API_BASE_URL="http://localhost:3000/api"
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
 CLERK_SECRET_KEY="sk_test_..."
-CLERK_WEBHOOK_SIGNING_SECRET="whsec_..."
-```
-
-5. Set up the database:
-
-```bash
-npx prisma migrate dev
-npx prisma generate
-```
-
-6. Seed the database (optional):
-
-```bash
-npm run db:seed
 ```
 
 ## Getting Started
@@ -85,15 +71,13 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 cp .env.example .env
 ```
 
-2. Start the app and database:
+2. Start the frontend container:
 
 ```bash
 docker compose up --build
 ```
 
 3. Open [http://localhost:3000](http://localhost:3000).
-
-The Docker entrypoint runs Prisma migrations and seeds the database before the Next.js server starts.
 
 ## Docker Development
 
@@ -115,11 +99,7 @@ This mounts your workspace into the container, runs Next.js in development mode,
 │   └── ui/              # shadcn/ui primitives
 ├── hooks/               # Custom React hooks
 ├── lib/                 # Utility functions and configurations
-│   ├── api/             # Client-side API wrappers (Axios)
-│   ├── repositories/    # Object-style data access layers
-│   ├── services/        # Object-style backend service layers
 │   └── routes.ts        # Route definitions and protection rules
-├── prisma/             # Database schema and migrations
 ├── public/             # Static assets
 ├── proxy.ts            # Clerk-powered route protection
 └── components.json     # shadcn/ui configuration
@@ -142,26 +122,6 @@ Routes are defined in `lib/routes.ts`:
 - `authRoutes`: Redirect to dashboard if already logged in.
 - `protectedRoutes`: All other routes require authentication.
 
-## Database
-
-This project uses Prisma as the ORM with PostgreSQL. The schema is defined in `prisma/schema.prisma`.
-
-### Database Commands
-
-```bash
-# Generate Prisma client
-npx prisma generate
-
-# Create and run migrations
-npx prisma migrate dev
-
-# View database in Prisma Studio
-npx prisma studio
-
-# Seed the database
-npm run db:seed
-```
-
 ## Styling
 
 The project uses Tailwind CSS for styling with shadcn/ui components. Components are configured in `components.json`.
@@ -171,12 +131,9 @@ The project uses Tailwind CSS for styling with shadcn/ui components. Components 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
-- `npm run db:generate` - Generate the Prisma client
-- `npm run db:migrate:deploy` - Apply production migrations
 - `npm run lint` - Run ESLint
 - `npm run format` - Run Prettier to format code
 - `npm run format:check` - Check code formatting with Prettier
-- `npm run db:seed` - Seed the database
 
 ## Deployment
 
@@ -200,7 +157,6 @@ npm run start
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)
-- [Prisma Documentation](https://www.prisma.io/docs)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 - [shadcn/ui Documentation](https://ui.shadcn.com)
 
