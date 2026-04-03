@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
@@ -10,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Pill } from '@/components/ui/pill'
 import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
+import FormErrorMessage from '@/components/ui/form-error-message'
 import { cn } from '@/lib/utils'
 import {
   useAccountsQuery,
@@ -71,7 +73,19 @@ export default function AccountsPage() {
   const [activeFilter, setActiveFilter] = useState<AccountFilter>('All')
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null)
   const [showComposer, setShowComposer] = useState(false)
-  const [form, setForm] = useState<AccountForm>(DEFAULT_FORM)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    trigger,
+    formState: { errors },
+  } = useForm<AccountForm>({
+    defaultValues: DEFAULT_FORM,
+  })
+
+  const form = watch()
 
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
   const totalBalance = useMemo(() => getNetWorth(accounts), [accounts])
@@ -92,76 +106,30 @@ export default function AccountsPage() {
 
   const resetForm = () => {
     setEditingAccountId(null)
-    setForm(DEFAULT_FORM)
+    reset(DEFAULT_FORM)
     setShowComposer(false)
   }
 
   const handleEdit = (account: Account) => {
     setEditingAccountId(account.id)
-    setForm(mapAccountToForm(account))
+    reset(mapAccountToForm(account))
     setShowComposer(true)
   }
-
-  const handleSubmit = () => {
-    const name = form.name.trim()
-    if (!name) {
-      toast.error('Account name is required.')
-      return
-    }
-
-    const balance = Number(form.balance || 0)
-    const creditLimit = Number(form.creditLimit)
-    const availableCredit = Number(form.availableCredit)
-    const dueDayOfMonth = Number(form.dueDayOfMonth)
-
-    if (isCreditCard) {
-      if (!form.creditLimit.trim()) {
-        toast.error('Credit limit is required for credit cards.')
-        return
-      }
-
-      if (!Number.isFinite(creditLimit) || creditLimit < 0) {
-        toast.error('Enter a valid credit limit.')
-        return
-      }
-
-      if (!form.availableCredit.trim()) {
-        toast.error('Available credit is required for credit cards.')
-        return
-      }
-
-      if (!Number.isFinite(availableCredit) || availableCredit < 0) {
-        toast.error('Enter a valid available credit amount.')
-        return
-      }
-
-      if (availableCredit > creditLimit) {
-        toast.error('Available credit cannot be higher than the total limit.')
-        return
-      }
-
-      if (!form.dueDayOfMonth.trim()) {
-        toast.error('Due day is required for credit cards.')
-        return
-      }
-
-      if (!Number.isInteger(dueDayOfMonth) || dueDayOfMonth < 1 || dueDayOfMonth > 31) {
-        toast.error('Due day must be between 1 and 31.')
-        return
-      }
-    } else if (!Number.isFinite(balance)) {
-      toast.error('Enter a valid starting balance.')
-      return
-    }
+  const handleAccountSubmit = (values: AccountForm) => {
+    const name = values.name.trim()
+    const balance = Number(values.balance || 0)
+    const creditLimit = Number(values.creditLimit)
+    const availableCredit = Number(values.availableCredit)
+    const dueDayOfMonth = Number(values.dueDayOfMonth)
 
     const payload = {
       name,
-      type: form.type,
-      currency: form.currency,
+      type: values.type,
+      currency: values.currency,
       balance: isCreditCard
         ? String((creditLimit - availableCredit).toFixed(2))
         : String(balance.toFixed(2)),
-      institutionName: form.institutionName.trim() || undefined,
+      institutionName: values.institutionName.trim() || undefined,
       creditLimit: isCreditCard ? String(creditLimit.toFixed(2)) : undefined,
       availableCredit: isCreditCard ? String(availableCredit.toFixed(2)) : undefined,
       dueDayOfMonth: isCreditCard ? dueDayOfMonth : undefined,
@@ -223,7 +191,13 @@ export default function AccountsPage() {
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setForm((c) => ({ ...c, type: option.value }))}
+                  onClick={async () => {
+                    setValue('type', option.value, {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    })
+                    await trigger(['type', 'creditLimit', 'availableCredit', 'dueDayOfMonth', 'balance'])
+                  }}
                   className={cn(
                     'rounded-full border px-4 py-2.5 text-[14px] font-semibold transition',
                     selected
@@ -241,10 +215,13 @@ export default function AccountsPage() {
           <Label htmlFor="account-name">Account name</Label>
           <Input
             id="account-name"
-            value={form.name}
-            onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))}
+            {...register('name', {
+              required: 'Account name is required.',
+              validate: (value) => value.trim().length > 0 || 'Account name is required.',
+            })}
             placeholder="e.g. BDO Savings, GCash, Maya"
           />
+          <FormErrorMessage message={errors.name?.message} />
         </div>
 
         <div className="space-y-2">
@@ -252,7 +229,13 @@ export default function AccountsPage() {
           <select
             id="account-type"
             value={form.type}
-            onChange={(e) => setForm((c) => ({ ...c, type: e.target.value as AccountType }))}
+            onChange={async (e) => {
+              setValue('type', e.target.value as AccountType, {
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+              await trigger(['type', 'creditLimit', 'availableCredit', 'dueDayOfMonth', 'balance'])
+            }}
             className="hidden h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30 lg:block"
           >
             {ACCOUNT_TYPE_OPTIONS.map((option) => (
@@ -268,7 +251,12 @@ export default function AccountsPage() {
           <select
             id="account-currency"
             value={form.currency}
-            onChange={(e) => setForm((c) => ({ ...c, currency: e.target.value }))}
+            onChange={(e) =>
+              setValue('currency', e.target.value, {
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+            }
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
             {ACCOUNT_CURRENCY_OPTIONS.map((currency) => (
@@ -283,8 +271,7 @@ export default function AccountsPage() {
           <Label htmlFor="account-institution">Institution</Label>
           <Input
             id="account-institution"
-            value={form.institutionName}
-            onChange={(e) => setForm((c) => ({ ...c, institutionName: e.target.value }))}
+            {...register('institutionName')}
             placeholder="e.g. BDO, UnionBank, Maya"
           />
         </div>
@@ -296,20 +283,48 @@ export default function AccountsPage() {
               <Input
                 id="account-limit"
                 type="number"
-                value={form.creditLimit}
-                onChange={(e) => setForm((c) => ({ ...c, creditLimit: e.target.value }))}
+                {...register('creditLimit', {
+                  validate: (value) => {
+                    if (watch('type') !== 'CREDIT_CARD') return true
+                    if (!value.trim()) return 'Credit limit is required for credit cards.'
+
+                    const parsed = Number(value)
+                    return Number.isFinite(parsed) && parsed >= 0
+                      ? true
+                      : 'Enter a valid credit limit.'
+                  },
+                })}
                 placeholder="20000.00"
               />
+              <FormErrorMessage message={errors.creditLimit?.message} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="account-available">Available credit</Label>
               <Input
                 id="account-available"
                 type="number"
-                value={form.availableCredit}
-                onChange={(e) => setForm((c) => ({ ...c, availableCredit: e.target.value }))}
+                {...register('availableCredit', {
+                  validate: (value) => {
+                    if (watch('type') !== 'CREDIT_CARD') return true
+                    if (!value.trim()) return 'Available credit is required for credit cards.'
+
+                    const parsed = Number(value)
+                    const limit = Number(watch('creditLimit'))
+
+                    if (!Number.isFinite(parsed) || parsed < 0) {
+                      return 'Enter a valid available credit amount.'
+                    }
+
+                    if (Number.isFinite(limit) && parsed > limit) {
+                      return 'Available credit cannot be higher than the total limit.'
+                    }
+
+                    return true
+                  },
+                })}
                 placeholder="16900.00"
               />
+              <FormErrorMessage message={errors.availableCredit?.message} />
             </div>
             <div className="space-y-2 xl:col-span-2">
               <Label htmlFor="account-due">Due day</Label>
@@ -318,10 +333,20 @@ export default function AccountsPage() {
                 type="number"
                 min="1"
                 max="31"
-                value={form.dueDayOfMonth}
-                onChange={(e) => setForm((c) => ({ ...c, dueDayOfMonth: e.target.value }))}
+                {...register('dueDayOfMonth', {
+                  validate: (value) => {
+                    if (watch('type') !== 'CREDIT_CARD') return true
+                    if (!value.trim()) return 'Due day is required for credit cards.'
+
+                    const parsed = Number(value)
+                    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 31
+                      ? true
+                      : 'Due day must be between 1 and 31.'
+                  },
+                })}
                 placeholder="16"
               />
+              <FormErrorMessage message={errors.dueDayOfMonth?.message} />
             </div>
           </>
         ) : (
@@ -330,17 +355,24 @@ export default function AccountsPage() {
             <Input
               id="account-balance"
               type="number"
-              value={form.balance}
-              onChange={(e) => setForm((c) => ({ ...c, balance: e.target.value }))}
+              {...register('balance', {
+                validate: (value) => {
+                  if (watch('type') === 'CREDIT_CARD') return true
+                  return Number.isFinite(Number(value || 0))
+                    ? true
+                    : 'Enter a valid starting balance.'
+                },
+              })}
               placeholder="25000.00"
             />
+            <FormErrorMessage message={errors.balance?.message} />
           </div>
         )}
       </div>
 
       <div className="mt-6 flex gap-3">
         <Button
-          onClick={handleSubmit}
+          onClick={handleSubmit(handleAccountSubmit)}
           className="flex-1"
           disabled={createAccountMutation.isPending || updateAccountMutation.isPending}
         >

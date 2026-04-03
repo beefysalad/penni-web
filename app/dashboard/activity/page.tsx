@@ -1,6 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
@@ -10,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
 import { Pill } from '@/components/ui/pill'
+import FormErrorMessage from '@/components/ui/form-error-message'
 import { cn } from '@/lib/utils'
 import {
   useTransactionsQuery,
@@ -47,6 +51,59 @@ const DEFAULT_FORM: TransactionForm = {
   notes: '',
 }
 
+const transactionFormSchema = z
+  .object({
+    mode: z.enum(['EXPENSE', 'INCOME', 'TRANSFER']),
+    title: z.string(),
+    amount: z
+      .string()
+      .trim()
+      .min(1, 'Enter a valid amount.')
+      .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, 'Enter a valid amount.'),
+    accountId: z.string(),
+    toAccountId: z.string(),
+    categoryId: z.string(),
+    transactionAt: z.string().min(1, 'Choose a date.'),
+    notes: z.string(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.mode === 'TRANSFER') {
+      if (!value.accountId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['accountId'],
+          message: 'Choose a source account.',
+        })
+      }
+
+      if (!value.toAccountId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['toAccountId'],
+          message: 'Choose a destination account.',
+        })
+      }
+
+      if (value.accountId && value.toAccountId && value.accountId === value.toAccountId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['toAccountId'],
+          message: 'Pick two different accounts for this transfer.',
+        })
+      }
+
+      return
+    }
+
+    if (!value.title.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['title'],
+        message: 'Transaction title is required.',
+      })
+    }
+  })
+
 function toIsoDate(dateValue: string) {
   return new Date(`${dateValue}T12:00:00`).toISOString()
 }
@@ -63,7 +120,20 @@ export default function ActivityPage() {
   const [activeTypeFilter, setActiveTypeFilter] = useState<TypeFilter>('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [showComposer, setShowComposer] = useState(false)
-  const [form, setForm] = useState<TransactionForm>(DEFAULT_FORM)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    trigger,
+    formState: { errors },
+  } = useForm<TransactionForm>({
+    resolver: zodResolver(transactionFormSchema),
+    defaultValues: DEFAULT_FORM,
+  })
+
+  const form = watch()
 
   const allTransactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data])
   const accounts = accountsQuery.data ?? []
@@ -101,39 +171,38 @@ export default function ActivityPage() {
   )
   const netCashFlow = totalIncome - totalExpense
 
-  const handleCreateTransaction = () => {
-    const title = form.title.trim()
-    const amount = Number(form.amount)
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error('Enter a valid amount.')
+  useEffect(() => {
+    if (form.mode !== 'TRANSFER') {
       return
     }
 
-    if (form.mode === 'TRANSFER') {
-      if (!form.accountId || !form.toAccountId) {
-        toast.error('Choose both the source and destination accounts.')
-        return
-      }
+    if (form.accountId && !transferSourceAccounts.some((account) => account.id === form.accountId)) {
+      setValue('accountId', '', {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      })
+    }
+  }, [form.mode, form.accountId, setValue, transferSourceAccounts])
 
-      if (form.accountId === form.toAccountId) {
-        toast.error('Pick two different accounts for this transfer.')
-        return
-      }
+  const handleCreateTransaction = (values: TransactionForm) => {
+    const title = values.title.trim()
+    const amount = Number(values.amount)
 
+    if (values.mode === 'TRANSFER') {
       createTransferMutation.mutate(
         {
-          fromAccountId: form.accountId,
-          toAccountId: form.toAccountId,
+          fromAccountId: values.accountId,
+          toAccountId: values.toAccountId,
           title: title || undefined,
-          notes: form.notes.trim() || undefined,
+          notes: values.notes.trim() || undefined,
           amount: amount.toFixed(2),
-          transactionAt: toIsoDate(form.transactionAt),
+          transactionAt: toIsoDate(values.transactionAt),
         },
         {
           onSuccess: () => {
             toast.success('Transfer recorded.')
-            setForm((current) => ({ ...DEFAULT_FORM, mode: current.mode, transactionAt: current.transactionAt }))
+            reset({ ...DEFAULT_FORM, mode: values.mode, transactionAt: values.transactionAt })
             setShowComposer(false)
           },
           onError: (error) => {
@@ -141,30 +210,24 @@ export default function ActivityPage() {
           },
         }
       )
-
-      return
-    }
-
-    if (!title) {
-      toast.error('Transaction title is required.')
       return
     }
 
     createTransactionMutation.mutate(
       {
-        accountId: form.accountId || undefined,
-        categoryId: form.categoryId || undefined,
-        type: form.mode as CategoryType,
+        accountId: values.accountId || undefined,
+        categoryId: values.categoryId || undefined,
+        type: values.mode as CategoryType,
         title,
-        notes: form.notes.trim() || undefined,
+        notes: values.notes.trim() || undefined,
         amount: amount.toFixed(2),
         currency: 'PHP',
-        transactionAt: toIsoDate(form.transactionAt),
+        transactionAt: toIsoDate(values.transactionAt),
       },
       {
         onSuccess: () => {
           toast.success(`${title} added to activity.`)
-          setForm((current) => ({ ...DEFAULT_FORM, mode: current.mode, transactionAt: current.transactionAt }))
+          reset({ ...DEFAULT_FORM, mode: values.mode, transactionAt: values.transactionAt })
           setShowComposer(false)
         },
         onError: (error) => {
@@ -196,17 +259,16 @@ export default function ActivityPage() {
                 <button
                   key={item}
                   type="button"
-                  onClick={() =>
-                    setForm((current) => {
-                      const isValidTransferSrc = item === 'TRANSFER' ? transferSourceAccounts.some((a) => a.id === current.accountId) : true;
-                      return {
-                        ...current,
-                        mode: item,
-                        categoryId: '',
-                        accountId: isValidTransferSrc ? current.accountId : '',
-                      };
-                    })
-                  }
+                  onClick={async () => {
+                    const nextAccountId =
+                      item === 'TRANSFER' && !transferSourceAccounts.some((a) => a.id === form.accountId)
+                        ? ''
+                        : form.accountId
+                    setValue('mode', item, { shouldDirty: true, shouldTouch: true })
+                    setValue('categoryId', '', { shouldDirty: true })
+                    setValue('accountId', nextAccountId, { shouldDirty: true })
+                    await trigger(['mode', 'title', 'amount', 'accountId', 'toAccountId'])
+                  }}
                   className={cn(
                     'flex-1 rounded-[16px] px-4 py-3 text-[15px] font-semibold transition',
                     selected ? 'bg-[#8bff62] text-[#07110a]' : 'text-[#97a49c]'
@@ -224,18 +286,17 @@ export default function ActivityPage() {
           <select
             id="transaction-type"
             value={form.mode}
-            onChange={(e) =>
-              setForm((current) => {
-                const newMode = e.target.value as TransactionForm['mode'];
-                const isValidTransferSrc = newMode === 'TRANSFER' ? transferSourceAccounts.some((a) => a.id === current.accountId) : true;
-                return {
-                  ...current,
-                  mode: newMode,
-                  categoryId: '',
-                  accountId: isValidTransferSrc ? current.accountId : '',
-                };
-              })
-            }
+            onChange={async (e) => {
+              const newMode = e.target.value as TransactionForm['mode']
+              const nextAccountId =
+                newMode === 'TRANSFER' && !transferSourceAccounts.some((a) => a.id === form.accountId)
+                  ? ''
+                  : form.accountId
+              setValue('mode', newMode, { shouldDirty: true, shouldTouch: true })
+              setValue('categoryId', '', { shouldDirty: true })
+              setValue('accountId', nextAccountId, { shouldDirty: true })
+              await trigger(['mode', 'title', 'amount', 'accountId', 'toAccountId'])
+            }}
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
             <option value="EXPENSE">Expense</option>
@@ -246,26 +307,28 @@ export default function ActivityPage() {
 
         <div className="space-y-2">
           <Label htmlFor="transaction-date">Date</Label>
-          <Input id="transaction-date" type="date" value={form.transactionAt} onChange={(e) => setForm((current) => ({ ...current, transactionAt: e.target.value }))} />
+          <Input id="transaction-date" type="date" {...register('transactionAt')} />
+          <FormErrorMessage message={errors.transactionAt?.message} />
         </div>
 
         <div className="space-y-2 xl:col-span-2">
           <Label htmlFor="transaction-title">{form.mode === 'TRANSFER' ? 'Label' : 'Title'}</Label>
           <Input
             id="transaction-title"
-            value={form.title}
-            onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))}
+            {...register('title')}
             placeholder={
               form.mode === 'TRANSFER'
                 ? 'e.g. ATM withdrawal, Move to savings'
                 : 'e.g. Groceries, Salary, Internet bill'
             }
           />
+          <FormErrorMessage message={errors.title?.message} />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="transaction-amount">Amount</Label>
-          <Input id="transaction-amount" type="number" value={form.amount} onChange={(e) => setForm((current) => ({ ...current, amount: e.target.value }))} placeholder="0.00" />
+          <Input id="transaction-amount" type="number" {...register('amount')} placeholder="0.00" />
+          <FormErrorMessage message={errors.amount?.message} />
         </div>
 
         <div className="space-y-2">
@@ -273,7 +336,13 @@ export default function ActivityPage() {
           <select
             id="transaction-account"
             value={form.accountId}
-            onChange={(e) => setForm((current) => ({ ...current, accountId: e.target.value }))}
+            onChange={(e) =>
+              setValue('accountId', e.target.value, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              })
+            }
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
             <option value="">{form.mode === 'TRANSFER' ? 'Choose source account' : 'Optional account'}</option>
@@ -281,6 +350,7 @@ export default function ActivityPage() {
               <option key={account.id} value={account.id}>{account.name}</option>
             ))}
           </select>
+          <FormErrorMessage message={errors.accountId?.message} />
         </div>
 
         {form.mode === 'TRANSFER' ? (
@@ -289,7 +359,13 @@ export default function ActivityPage() {
             <select
               id="transaction-to-account"
               value={form.toAccountId}
-              onChange={(e) => setForm((current) => ({ ...current, toAccountId: e.target.value }))}
+              onChange={(e) =>
+                setValue('toAccountId', e.target.value, {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                  shouldValidate: true,
+                })
+              }
               className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
             >
               <option value="">Choose destination account</option>
@@ -297,6 +373,7 @@ export default function ActivityPage() {
                 <option key={account.id} value={account.id}>{account.name}</option>
               ))}
             </select>
+            <FormErrorMessage message={errors.toAccountId?.message} />
           </div>
         ) : (
           <div className="space-y-2">
@@ -304,7 +381,13 @@ export default function ActivityPage() {
             <select
               id="transaction-category"
               value={form.categoryId}
-              onChange={(e) => setForm((current) => ({ ...current, categoryId: e.target.value }))}
+              onChange={(e) =>
+                setValue('categoryId', e.target.value, {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                  shouldValidate: true,
+                })
+              }
               className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
             >
               <option value="">Optional category</option>
@@ -317,19 +400,27 @@ export default function ActivityPage() {
 
         <div className="space-y-2 xl:col-span-2">
           <Label htmlFor="transaction-notes">Notes</Label>
-          <Input id="transaction-notes" value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} placeholder="Optional note" />
+          <Input id="transaction-notes" {...register('notes')} placeholder="Optional note" />
         </div>
       </div>
 
       <div className="mt-6 flex gap-3">
-        <Button onClick={handleCreateTransaction} disabled={createTransactionMutation.isPending || createTransferMutation.isPending}>
+        <Button onClick={handleSubmit(handleCreateTransaction)} disabled={createTransactionMutation.isPending || createTransferMutation.isPending}>
           {createTransactionMutation.isPending || createTransferMutation.isPending
             ? 'Saving...'
             : form.mode === 'TRANSFER'
               ? 'Save transfer'
               : 'Save transaction'}
         </Button>
-        <Button variant="secondary" onClick={() => setShowComposer(false)}>Cancel</Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            reset(DEFAULT_FORM)
+            setShowComposer(false)
+          }}
+        >
+          Cancel
+        </Button>
       </div>
     </div>
   )

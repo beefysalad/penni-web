@@ -1,6 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
@@ -8,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
+import FormErrorMessage from '@/components/ui/form-error-message'
 import { useBudgetsQuery, useCreateBudgetMutation, useDeleteBudgetMutation, useUpdateBudgetMutation } from '@/hooks/finance/use-budgets-query'
 import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { useTransactionsQuery } from '@/hooks/finance/use-transactions-query'
@@ -38,6 +42,37 @@ const DEFAULT_FORM: BudgetForm = {
   periodEnd: endOfMonth,
 }
 
+const budgetFormSchema = z
+  .object({
+    name: z.string(),
+    amount: z
+      .string()
+      .trim()
+      .min(1, 'Enter a budget amount.')
+      .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, 'Enter a valid budget amount.'),
+    categoryId: z.string(),
+    alertThreshold: z
+      .string()
+      .trim()
+      .min(1, 'Enter an alert threshold.')
+      .refine((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100, 'Alert threshold must be between 1 and 100.'),
+    periodStart: z.string().min(1, 'Choose a start date.'),
+    periodEnd: z.string().min(1, 'Choose an end date.'),
+  })
+  .superRefine((value, ctx) => {
+    if (!value.periodStart || !value.periodEnd) {
+      return
+    }
+
+    if (new Date(value.periodEnd).getTime() < new Date(value.periodStart).getTime()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['periodEnd'],
+        message: 'Period end must be on or after the start date.',
+      })
+    }
+  })
+
 function toIsoDate(dateValue: string, endOfDay = false) {
   return new Date(`${dateValue}T${endOfDay ? '23:59:59' : '00:00:00'}`).toISOString()
 }
@@ -63,7 +98,19 @@ export default function BudgetsPage() {
 
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null)
   const [showComposer, setShowComposer] = useState(false)
-  const [form, setForm] = useState<BudgetForm>(DEFAULT_FORM)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<BudgetForm>({
+    resolver: zodResolver(budgetFormSchema),
+    defaultValues: DEFAULT_FORM,
+  })
+
+  const form = watch()
 
   const budgets = budgetsQuery.data ?? []
   const categories = categoriesQuery.data ?? []
@@ -77,25 +124,21 @@ export default function BudgetsPage() {
 
   const resetForm = () => {
     setEditingBudgetId(null)
-    setForm(DEFAULT_FORM)
+    reset(DEFAULT_FORM)
     setShowComposer(false)
   }
 
-  const handleSubmit = () => {
-    const amount = Number(form.amount)
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error('Enter a valid budget amount.')
-      return
-    }
+  const handleBudgetSubmit = (values: BudgetForm) => {
+    const amount = Number(values.amount)
 
     const payload = {
-      name: form.name.trim() || undefined,
-      categoryId: form.categoryId || undefined,
+      name: values.name.trim() || undefined,
+      categoryId: values.categoryId || undefined,
       amount: amount.toFixed(2),
       currency: 'PHP',
-      alertThreshold: Number(form.alertThreshold || 80),
-      periodStart: toIsoDate(form.periodStart),
-      periodEnd: toIsoDate(form.periodEnd, true),
+      alertThreshold: Number(values.alertThreshold || 80),
+      periodStart: toIsoDate(values.periodStart),
+      periodEnd: toIsoDate(values.periodEnd, true),
     }
 
     if (editingBudgetId) {
@@ -140,7 +183,7 @@ export default function BudgetsPage() {
       <div className="mt-6 space-y-4">
         <div className="space-y-2">
           <Label htmlFor="budget-name">Budget name</Label>
-          <Input id="budget-name" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} placeholder="e.g. Food, Shopping, Family" />
+          <Input id="budget-name" {...register('name')} placeholder="e.g. Food, Shopping, Family" />
         </div>
 
         <div className="space-y-2">
@@ -148,7 +191,13 @@ export default function BudgetsPage() {
           <select
             id="budget-category"
             value={form.categoryId}
-            onChange={(e) => setForm((c) => ({ ...c, categoryId: e.target.value }))}
+            onChange={(e) =>
+              setValue('categoryId', e.target.value, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              })
+            }
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
             <option value="">Optional category</option>
@@ -161,29 +210,33 @@ export default function BudgetsPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="budget-amount">Amount</Label>
-            <Input id="budget-amount" type="number" value={form.amount} onChange={(e) => setForm((c) => ({ ...c, amount: e.target.value }))} placeholder="5000.00" />
+            <Input id="budget-amount" type="number" {...register('amount')} placeholder="5000.00" />
+            <FormErrorMessage message={errors.amount?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="budget-alert">Alert threshold</Label>
-            <Input id="budget-alert" type="number" min="1" max="100" value={form.alertThreshold} onChange={(e) => setForm((c) => ({ ...c, alertThreshold: e.target.value }))} placeholder="80" />
+            <Input id="budget-alert" type="number" min="1" max="100" {...register('alertThreshold')} placeholder="80" />
+            <FormErrorMessage message={errors.alertThreshold?.message} />
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="budget-start">Period start</Label>
-            <Input id="budget-start" type="date" value={form.periodStart} onChange={(e) => setForm((c) => ({ ...c, periodStart: e.target.value }))} />
+            <Input id="budget-start" type="date" {...register('periodStart')} />
+            <FormErrorMessage message={errors.periodStart?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="budget-end">Period end</Label>
-            <Input id="budget-end" type="date" value={form.periodEnd} onChange={(e) => setForm((c) => ({ ...c, periodEnd: e.target.value }))} />
+            <Input id="budget-end" type="date" {...register('periodEnd')} />
+            <FormErrorMessage message={errors.periodEnd?.message} />
           </div>
         </div>
       </div>
 
       <div className="mt-6 flex gap-3">
         <Button
-          onClick={handleSubmit}
+          onClick={handleSubmit(handleBudgetSubmit)}
           className="flex-1"
           disabled={createBudgetMutation.isPending || updateBudgetMutation.isPending}
         >
@@ -267,7 +320,8 @@ export default function BudgetsPage() {
                             type="button"
                             onClick={() => {
                               setEditingBudgetId(budget.id)
-                              setForm(mapBudgetToForm(budget))
+                              reset(mapBudgetToForm(budget))
+                              setShowComposer(true)
                             }}
                             className="flex size-9 items-center justify-center rounded-full bg-[#18221d] transition hover:bg-[#213129]"
                           >

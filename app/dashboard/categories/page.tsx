@@ -1,6 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
@@ -8,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
+import FormErrorMessage from '@/components/ui/form-error-message'
 import { CategoryRow, FinanceEmptyState } from '@/components/finance/management-components'
 import { useCategoriesQuery, useCreateCategoryMutation } from '@/hooks/finance/use-categories-query'
 import type { CategoryType } from '@/lib/finance.types'
@@ -26,13 +30,31 @@ const DEFAULT_FORM: CategoryForm = {
   colorHex: CATEGORY_COLORS[0],
 }
 
+const categoryFormSchema = z.object({
+  name: z.string().trim().min(1, 'Category name is required.'),
+  type: z.enum(['EXPENSE', 'INCOME']),
+  colorHex: z.string().min(1, 'Choose a category color.'),
+})
+
 export default function CategoriesPage() {
   const expenseCategoriesQuery = useCategoriesQuery('EXPENSE')
   const incomeCategoriesQuery = useCategoriesQuery('INCOME')
   const createCategoryMutation = useCreateCategoryMutation()
 
   const [showComposer, setShowComposer] = useState(false)
-  const [form, setForm] = useState<CategoryForm>(DEFAULT_FORM)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<CategoryForm>({
+    resolver: zodResolver(categoryFormSchema),
+    defaultValues: DEFAULT_FORM,
+  })
+
+  const form = watch()
 
   const categories = useMemo(
     () => [...(expenseCategoriesQuery.data ?? []), ...(incomeCategoriesQuery.data ?? [])],
@@ -50,12 +72,8 @@ export default function CategoriesPage() {
 
   const isLoading = expenseCategoriesQuery.isLoading || incomeCategoriesQuery.isLoading
 
-  const handleCreateCategory = () => {
-    const name = form.name.trim()
-    if (!name) {
-      toast.error('Category name is required.')
-      return
-    }
+  const handleCreateCategory = (values: CategoryForm) => {
+    const name = values.name.trim()
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
@@ -63,13 +81,13 @@ export default function CategoriesPage() {
       {
         name,
         slug: slug || `category-${Date.now()}`,
-        type: form.type,
-        colorHex: form.colorHex,
+        type: values.type,
+        colorHex: values.colorHex,
       },
       {
         onSuccess: () => {
           toast.success(`${name} added to your categories.`)
-          setForm((current) => ({ ...current, name: '', colorHex: CATEGORY_COLORS[0] }))
+          reset(DEFAULT_FORM)
           setShowComposer(false)
         },
         onError: (error) => {
@@ -99,10 +117,10 @@ export default function CategoriesPage() {
           <Label htmlFor="category-name">Category name</Label>
           <Input
             id="category-name"
-            value={form.name}
-            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+            {...register('name')}
             placeholder={form.type === 'EXPENSE' ? 'e.g. Food, Bills, Shopping' : 'e.g. Salary, Freelance'}
           />
+          <FormErrorMessage message={errors.name?.message} />
         </div>
 
         <div className="space-y-2">
@@ -111,7 +129,11 @@ export default function CategoriesPage() {
             id="category-type"
             value={form.type}
             onChange={(event) =>
-              setForm((current) => ({ ...current, type: event.target.value as CategoryType }))
+              setValue('type', event.target.value as CategoryType, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              })
             }
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
@@ -130,7 +152,13 @@ export default function CategoriesPage() {
               <button
                 key={color}
                 type="button"
-                onClick={() => setForm((current) => ({ ...current, colorHex: color }))}
+                onClick={() =>
+                  setValue('colorHex', color, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  })
+                }
                 className={`size-10 rounded-full border-2 transition ${
                   form.colorHex === color ? 'border-white/70 scale-105' : 'border-transparent'
                 }`}
@@ -139,19 +167,26 @@ export default function CategoriesPage() {
               />
             ))}
           </div>
+          <FormErrorMessage message={errors.colorHex?.message} />
         </div>
       </div>
 
       <div className="mt-6 flex gap-3">
         <Button
-          onClick={handleCreateCategory}
+          onClick={handleSubmit(handleCreateCategory)}
           className="flex-1"
           disabled={createCategoryMutation.isPending}
         >
           <Plus className="size-4" />
           {createCategoryMutation.isPending ? 'Saving...' : 'Add category'}
         </Button>
-        <Button variant="secondary" onClick={() => setShowComposer(false)}>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            reset(DEFAULT_FORM)
+            setShowComposer(false)
+          }}
+        >
           Cancel
         </Button>
       </div>

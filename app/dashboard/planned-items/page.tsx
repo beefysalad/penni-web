@@ -1,6 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
@@ -8,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
+import FormErrorMessage from '@/components/ui/form-error-message'
 import { cn } from '@/lib/utils'
 import {
   FinanceEmptyState,
@@ -58,6 +62,62 @@ const RECURRENCE_OPTIONS: Array<{ label: string; value: RecurrenceFrequency }> =
     { label: 'Yearly', value: 'YEARLY' },
   ]
 
+const plannedItemFormSchema = z
+  .object({
+    type: z.enum(['EXPENSE', 'INCOME']),
+    title: z.string().trim().min(1, 'A recurring item name is required.'),
+    amount: z
+      .string()
+      .trim()
+      .min(1, 'Enter a valid amount.')
+      .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, 'Enter a valid amount.'),
+    accountId: z.string(),
+    startDate: z.string().min(1, 'Choose a start date.'),
+    recurrence: z.enum(['WEEKLY', 'MONTHLY', 'SEMI_MONTHLY', 'QUARTERLY', 'YEARLY']),
+    firstSemiMonthlyDay: z.string(),
+    secondSemiMonthlyDay: z.string(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.type === 'INCOME' && !value.accountId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['accountId'],
+        message: 'Income recurring items need an account.',
+      })
+    }
+
+    if (value.recurrence !== 'SEMI_MONTHLY') {
+      return
+    }
+
+    const first = Number(value.firstSemiMonthlyDay)
+    const second = Number(value.secondSemiMonthlyDay)
+
+    if (!Number.isInteger(first) || first < 1 || first > 31) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['firstSemiMonthlyDay'],
+        message: 'Choose a day between 1 and 31.',
+      })
+    }
+
+    if (!Number.isInteger(second) || second < 1 || second > 31) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['secondSemiMonthlyDay'],
+        message: 'Choose a day between 1 and 31.',
+      })
+    }
+
+    if (Number.isInteger(first) && Number.isInteger(second) && first === second) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['secondSemiMonthlyDay'],
+        message: 'The two semi-monthly days need to be different.',
+      })
+    }
+  })
+
 function toIsoDate(dateValue: string) {
   return new Date(`${dateValue}T00:00:00`).toISOString()
 }
@@ -69,7 +129,20 @@ export default function PlannedItemsPage() {
   const deletePlannedItemMutation = useDeletePlannedItemMutation()
 
   const [showComposer, setShowComposer] = useState(false)
-  const [form, setForm] = useState<PlannedItemForm>(DEFAULT_PLANNED_ITEM_FORM)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    trigger,
+    formState: { errors },
+  } = useForm<PlannedItemForm>({
+    resolver: zodResolver(plannedItemFormSchema),
+    defaultValues: DEFAULT_PLANNED_ITEM_FORM,
+  })
+
+  const form = watch()
 
   const accounts = accountsQuery.data ?? []
   const plannedItems = plannedItemsQuery.data ?? []
@@ -90,45 +163,30 @@ export default function PlannedItemsPage() {
   const isLoading = plannedItemsQuery.isLoading || accountsQuery.isLoading
 
   const resetComposer = () => {
-    setForm(DEFAULT_PLANNED_ITEM_FORM)
+    reset(DEFAULT_PLANNED_ITEM_FORM)
     setShowComposer(false)
   }
 
-  const handleCreatePlannedItem = () => {
-    const title = form.title.trim()
-    const amount = Number(form.amount)
-
-    if (!title) {
-      toast.error('A recurring item name is required.')
-      return
-    }
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error('Enter a valid amount.')
-      return
-    }
-
-    if (requiresAccount && !form.accountId) {
-      toast.error('Income recurring items need an account.')
-      return
-    }
+  const handleCreatePlannedItem = (values: PlannedItemForm) => {
+    const title = values.title.trim()
+    const amount = Number(values.amount)
 
     const semiMonthlyDays = isSemiMonthly
       ? [
-          Number(form.firstSemiMonthlyDay),
-          Number(form.secondSemiMonthlyDay),
+          Number(values.firstSemiMonthlyDay),
+          Number(values.secondSemiMonthlyDay),
         ].filter((value) => Number.isFinite(value))
       : undefined
 
     createPlannedItemMutation.mutate(
       {
-        accountId: form.accountId || undefined,
-        type: form.type,
+        accountId: values.accountId || undefined,
+        type: values.type,
         title,
         amount: amount.toFixed(2),
         currency: 'PHP',
-        startDate: toIsoDate(form.startDate),
-        recurrence: form.recurrence,
+        startDate: toIsoDate(values.startDate),
+        recurrence: values.recurrence,
         semiMonthlyDays,
         isActive: true,
       },
@@ -193,7 +251,10 @@ export default function PlannedItemsPage() {
                 <button
                   key={item}
                   type="button"
-                  onClick={() => setForm((current) => ({ ...current, type: item }))}
+                  onClick={async () => {
+                    setValue('type', item, { shouldDirty: true, shouldTouch: true })
+                    await trigger(['type', 'accountId'])
+                  }}
                   className={cn(
                     'flex-1 rounded-[16px] px-4 py-3 text-[15px] font-semibold transition',
                     selected ? 'bg-[#8bff62] text-[#07110a]' : 'text-[#97a49c]'
@@ -211,12 +272,13 @@ export default function PlannedItemsPage() {
           <select
             id="planned-type"
             value={form.type}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                type: event.target.value as CategoryType,
-              }))
-            }
+            onChange={async (event) => {
+              setValue('type', event.target.value as CategoryType, {
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+              await trigger(['type', 'accountId'])
+            }}
             className="hidden h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30 lg:block"
           >
             <option value="EXPENSE">Bill / Expense</option>
@@ -233,14 +295,9 @@ export default function PlannedItemsPage() {
           <Input
             id="planned-date"
             type="date"
-            value={form.startDate}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                startDate: event.target.value,
-              }))
-            }
+            {...register('startDate')}
           />
+          <FormErrorMessage message={errors.startDate?.message} />
         </div>
 
         <div className="space-y-2 xl:col-span-2">
@@ -249,19 +306,14 @@ export default function PlannedItemsPage() {
           </Label>
           <Input
             id="planned-title"
-            value={form.title}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                title: event.target.value,
-              }))
-            }
+            {...register('title')}
             placeholder={
               form.type === 'INCOME'
                 ? 'e.g. Payroll, Freelance retainer'
                 : 'e.g. Rent, Internet, Credit card'
             }
           />
+          <FormErrorMessage message={errors.title?.message} />
         </div>
 
         <div className="space-y-2">
@@ -271,15 +323,10 @@ export default function PlannedItemsPage() {
             type="number"
             min="0"
             step="0.01"
-            value={form.amount}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                amount: event.target.value,
-              }))
-            }
+            {...register('amount')}
             placeholder="0.00"
           />
+          <FormErrorMessage message={errors.amount?.message} />
         </div>
 
         <div className="space-y-2">
@@ -290,10 +337,11 @@ export default function PlannedItemsPage() {
             id="planned-account"
             value={form.accountId}
             onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                accountId: event.target.value,
-              }))
+              setValue('accountId', event.target.value, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              })
             }
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
@@ -314,6 +362,7 @@ export default function PlannedItemsPage() {
               {selectedAccount.name}.
             </p>
           ) : null}
+          <FormErrorMessage message={errors.accountId?.message} />
         </div>
 
         <div className="space-y-2 xl:col-span-2">
@@ -321,12 +370,13 @@ export default function PlannedItemsPage() {
           <select
             id="planned-recurrence"
             value={form.recurrence}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                recurrence: event.target.value as RecurrenceFrequency,
-              }))
-            }
+            onChange={async (event) => {
+              setValue('recurrence', event.target.value as RecurrenceFrequency, {
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+              await trigger(['firstSemiMonthlyDay', 'secondSemiMonthlyDay'])
+            }}
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
             {RECURRENCE_OPTIONS.map((option) => (
@@ -346,14 +396,9 @@ export default function PlannedItemsPage() {
                 type="number"
                 min="1"
                 max="31"
-                value={form.firstSemiMonthlyDay}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    firstSemiMonthlyDay: event.target.value,
-                  }))
-                }
+                {...register('firstSemiMonthlyDay')}
               />
+              <FormErrorMessage message={errors.firstSemiMonthlyDay?.message} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="semi-second">Second day</Label>
@@ -362,14 +407,9 @@ export default function PlannedItemsPage() {
                 type="number"
                 min="1"
                 max="31"
-                value={form.secondSemiMonthlyDay}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    secondSemiMonthlyDay: event.target.value,
-                  }))
-                }
+                {...register('secondSemiMonthlyDay')}
               />
+              <FormErrorMessage message={errors.secondSemiMonthlyDay?.message} />
             </div>
           </>
         ) : null}
@@ -395,7 +435,7 @@ export default function PlannedItemsPage() {
 
       <div className="mt-6 flex gap-3">
         <Button
-          onClick={handleCreatePlannedItem}
+          onClick={handleSubmit(handleCreatePlannedItem)}
           className="flex-1"
           disabled={createPlannedItemMutation.isPending}
         >
