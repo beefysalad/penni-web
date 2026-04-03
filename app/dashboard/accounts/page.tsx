@@ -109,17 +109,62 @@ export default function AccountsPage() {
       return
     }
 
+    const balance = Number(form.balance || 0)
+    const creditLimit = Number(form.creditLimit)
+    const availableCredit = Number(form.availableCredit)
+    const dueDayOfMonth = Number(form.dueDayOfMonth)
+
+    if (isCreditCard) {
+      if (!form.creditLimit.trim()) {
+        toast.error('Credit limit is required for credit cards.')
+        return
+      }
+
+      if (!Number.isFinite(creditLimit) || creditLimit < 0) {
+        toast.error('Enter a valid credit limit.')
+        return
+      }
+
+      if (!form.availableCredit.trim()) {
+        toast.error('Available credit is required for credit cards.')
+        return
+      }
+
+      if (!Number.isFinite(availableCredit) || availableCredit < 0) {
+        toast.error('Enter a valid available credit amount.')
+        return
+      }
+
+      if (availableCredit > creditLimit) {
+        toast.error('Available credit cannot be higher than the total limit.')
+        return
+      }
+
+      if (!form.dueDayOfMonth.trim()) {
+        toast.error('Due day is required for credit cards.')
+        return
+      }
+
+      if (!Number.isInteger(dueDayOfMonth) || dueDayOfMonth < 1 || dueDayOfMonth > 31) {
+        toast.error('Due day must be between 1 and 31.')
+        return
+      }
+    } else if (!Number.isFinite(balance)) {
+      toast.error('Enter a valid starting balance.')
+      return
+    }
+
     const payload = {
       name,
       type: form.type,
       currency: form.currency,
       balance: isCreditCard
-        ? String((Number(form.creditLimit || 0) - Number(form.availableCredit || 0)).toFixed(2))
-        : String(Number(form.balance || 0).toFixed(2)),
+        ? String((creditLimit - availableCredit).toFixed(2))
+        : String(balance.toFixed(2)),
       institutionName: form.institutionName.trim() || undefined,
-      creditLimit: isCreditCard ? String(Number(form.creditLimit || 0).toFixed(2)) : undefined,
-      availableCredit: isCreditCard ? String(Number(form.availableCredit || 0).toFixed(2)) : undefined,
-      dueDayOfMonth: isCreditCard && form.dueDayOfMonth ? Number(form.dueDayOfMonth) : undefined,
+      creditLimit: isCreditCard ? String(creditLimit.toFixed(2)) : undefined,
+      availableCredit: isCreditCard ? String(availableCredit.toFixed(2)) : undefined,
+      dueDayOfMonth: isCreditCard ? dueDayOfMonth : undefined,
     }
 
     if (editingAccountId) {
