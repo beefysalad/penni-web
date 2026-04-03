@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/pill'
 import { 
   ArrowUpRight, 
   ArrowDownLeft, 
+  ArrowRightLeft,
   LucideIcon,
   TrendingUp
 } from 'lucide-react'
@@ -29,8 +30,8 @@ export function AccountCard({ account, action }: { account: Account; action?: Re
       whileHover={{ scale: 1.01 }}
       className="rounded-[28px] border border-[#1b2a21]/60 bg-[#111916] p-5 transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
     >
-      <div className="flex flex-row items-center justify-between gap-4">
-        <div className="flex flex-1 flex-row items-center gap-4">
+      <div className="flex flex-row items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 flex-row items-center gap-4">
           <div className={cn('flex size-12 items-center justify-center rounded-2xl', meta.iconWrapClassName)}>
             <TypeIcon className="size-6" style={{ color: meta.accentColor }} />
           </div>
@@ -48,25 +49,34 @@ export function AccountCard({ account, action }: { account: Account; action?: Re
           </div>
         </div>
 
-        <div className="flex items-start gap-3">
-          {action}
-          <div className="flex flex-col items-end">
-          <p className={cn('text-xl font-bold tracking-tight', Number(account.balance) < 0 ? 'text-[#ff8a94]' : 'text-[#f4f7f5]')}>
-            {formatCurrency(Number(account.balance), account.currency)}
-          </p>
-          {account.institutionName && (
-            <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-[#5c6e64]">
-              {account.institutionName}
+        <div className="flex shrink-0 flex-col items-end gap-3">
+          {action ? (
+            <div className="flex items-center gap-2 self-end">
+              {action}
+            </div>
+          ) : null}
+          <div className="flex max-w-[140px] flex-col items-end sm:max-w-none">
+            <p
+              className={cn(
+                'max-w-full break-words text-right text-[22px] leading-tight font-bold tracking-tight sm:text-xl',
+                Number(account.balance) < 0 ? 'text-[#ff8a94]' : 'text-[#f4f7f5]'
+              )}
+            >
+              {formatCurrency(Number(account.balance), account.currency)}
             </p>
-          )}
-        </div>
+            {account.institutionName && (
+              <p className="mt-1 max-w-full truncate text-[11px] font-bold uppercase tracking-wider text-[#5c6e64]">
+                {account.institutionName}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
       {isCreditCard && (availableCredit !== null || creditLimit !== null || dueDayLabel) && (
         <div className="mt-4 border-t border-[#1b2a21]/30 pt-4">
-          <div className="flex flex-row items-center justify-between">
-            <div className="flex flex-row items-center gap-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-3 sm:flex sm:flex-row sm:items-center sm:gap-5">
               {availableCredit !== null && (
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-widest text-[#5c6e64]">
@@ -89,7 +99,7 @@ export function AccountCard({ account, action }: { account: Account; action?: Re
               )}
             </div>
             {dueDayLabel && (
-              <div className="flex flex-col items-end">
+              <div className="flex flex-col items-start sm:items-end">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-[#5c6e64]">
                   Due Date
                 </p>
@@ -116,24 +126,34 @@ export function TransactionRow({
 }) {
   const isExpense = transaction.type === 'EXPENSE'
   const sign = isExpense ? '-' : '+'
-  const amountColor = isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]'
-  const iconBg = isExpense ? 'bg-[#241719]' : 'bg-[#16211b]'
-  const Icon = isExpense ? ArrowDownLeft : ArrowUpRight
+  const isTransfer = transaction.source === 'TRANSFER'
+  const amountColor = isTransfer ? 'text-[#ffd66b]' : isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]'
+  const iconBg = isTransfer ? 'bg-[#2a2412]' : isExpense ? 'bg-[#241719]' : 'bg-[#16211b]'
+  const Icon = isTransfer ? ArrowRightLeft : isExpense ? ArrowDownLeft : ArrowUpRight
+  const iconColor = isTransfer ? 'text-[#ffd66b]' : isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]'
+  const sourceLabel =
+    transaction.source === 'RECURRING'
+      ? 'Recurring'
+      : transaction.source === 'IMPORTED'
+        ? 'Imported'
+        : transaction.source === 'TRANSFER'
+          ? 'Transfer'
+          : null
 
   return (
     <div className={cn('px-4 py-3.5 transition-colors hover:bg-white/5', !isLast && 'border-b border-[#17211c]/60')}>
       <div className="flex flex-row items-center gap-3">
         <div className={cn('flex size-11 items-center justify-center rounded-[14px]', iconBg)}>
-          <Icon className={cn('size-[17px]', isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]')} />
+          <Icon className={cn('size-[17px]', iconColor)} />
         </div>
 
         <div className="flex-1 min-w-0">
           <p className="truncate text-[16px] font-bold text-[#f4f7f5]">{transaction.title}</p>
           <div className="mt-1 flex flex-row items-center gap-2">
             <span className="text-[13px] font-medium text-[#6d786f]">{formatShortDate(transaction.transactionAt)}</span>
-            {transaction.source && transaction.source !== 'MANUAL' && (
+            {sourceLabel && (
               <Badge
-                label={transaction.source === 'RECURRING' ? 'Recurring' : 'Imported'}
+                label={sourceLabel}
                 variant="subtle"
                 size="sm"
                 className="bg-[#18221d] text-[#93a19a]"

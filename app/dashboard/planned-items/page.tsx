@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
+import { cn } from '@/lib/utils'
 import {
   FinanceEmptyState,
   PlannedItemRow,
@@ -164,7 +165,7 @@ export default function PlannedItemsPage() {
 
   const composerContent = (
     <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
           <p className="text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
             Plan ahead
@@ -182,7 +183,29 @@ export default function PlannedItemsPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-2">
+      <div className="mt-6 grid gap-4 xl:grid-cols-2 max-lg:mt-0">
+        <div className="space-y-2 xl:col-span-2 lg:hidden">
+          <Label>Type</Label>
+          <div className="flex rounded-[20px] bg-[#0d1411] p-1.5">
+            {(['EXPENSE', 'INCOME'] as const).map((item) => {
+              const selected = form.type === item
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setForm((current) => ({ ...current, type: item }))}
+                  className={cn(
+                    'flex-1 rounded-[16px] px-4 py-3 text-[15px] font-semibold transition',
+                    selected ? 'bg-[#8bff62] text-[#07110a]' : 'text-[#97a49c]'
+                  )}
+                >
+                  {item === 'EXPENSE' ? 'Bill' : 'Income'}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="planned-type">Type</Label>
           <select
@@ -194,7 +217,7 @@ export default function PlannedItemsPage() {
                 type: event.target.value as CategoryType,
               }))
             }
-            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+            className="hidden h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30 lg:block"
           >
             <option value="EXPENSE">Bill / Expense</option>
             <option value="INCOME">Income / Salary</option>
@@ -530,8 +553,8 @@ export default function PlannedItemsPage() {
       <MobileSheet
         open={showComposer}
         onClose={resetComposer}
-        title="New recurring item"
-        description="Use the same recurring flow as mobile, but in a tighter mobile web sheet."
+        eyebrow="Recurring"
+        title="Create planned item"
       >
         {composerContent}
       </MobileSheet>

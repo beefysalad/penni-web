@@ -13,7 +13,8 @@ import {
   MessageSquare, 
   LogOut, 
   ChevronRight,
-  Sparkles
+  Bot,
+  Shapes
 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -22,6 +23,8 @@ import { LucideIcon } from 'lucide-react'
 
 interface SettingsRowProps {
   icon: LucideIcon
+  iconBg?: string
+  iconColor?: string
   label: string
   value?: string
   href?: string
@@ -31,26 +34,35 @@ interface SettingsRowProps {
   as?: 'button' | 'div'
 }
 
-function SettingsRow({ icon: Icon, label, value, href, onClick, isLast, destructive, as = 'button' }: SettingsRowProps) {
+function SettingsRow({ icon: Icon, iconBg, iconColor, label, value, href, onClick, isLast, destructive, as = 'button' }: SettingsRowProps) {
   const content = (
     <div className={cn(
-      "flex flex-row items-center gap-4 px-4 py-4 transition-colors hover:bg-white/5",
+      "flex flex-row items-start gap-4 px-4 py-4 transition-colors hover:bg-white/5 md:items-center md:px-6",
       !isLast && "border-b border-[#17211c]/60"
     )}>
       <div className={cn(
-        "flex size-10 items-center justify-center rounded-xl",
-        destructive ? "bg-[#241719]" : "bg-[#18221d]"
+        "flex size-10 shrink-0 items-center justify-center rounded-xl",
+        iconBg ? iconBg : (destructive ? "bg-[#241719]" : "bg-[#18221d]")
       )}>
-        <Icon className={cn("size-5", destructive ? "text-[#ff8a94]" : "text-[#8bff62]")} />
+        <Icon className={cn("size-5", iconColor ? iconColor : (destructive ? "text-[#ff8a94]" : "text-[#8bff62]"))} />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <p className={cn("text-[15px] font-bold", destructive ? "text-[#ff8a94]" : "text-[#f4f7f5]")}>
           {label}
         </p>
+        {value ? (
+          <p className="mt-1 pr-4 text-[13px] leading-5 font-medium text-[#7f8c86] md:hidden">
+            {value}
+          </p>
+        ) : null}
       </div>
-      <div className="flex flex-row items-center gap-2">
-        {value && <span className="text-[13px] font-medium text-[#7f8c86]">{value}</span>}
-        <ChevronRight className="size-4 text-[#4a5650]" />
+      <div className="flex shrink-0 flex-row items-center gap-2 self-center md:w-[250px] md:justify-end">
+        {value ? (
+          <span className="hidden max-w-[220px] text-right text-[14px] leading-6 font-medium text-[#93a19a] md:inline">
+            {value}
+          </span>
+        ) : null}
+        <ChevronRight className="size-4 shrink-0 text-[#4a5650]" />
       </div>
     </div>
   )
@@ -67,30 +79,30 @@ export default function SettingsPage() {
     {
       title: 'Finance',
       items: [
-        { icon: Sparkles, label: 'Recurring items', value: 'Upcoming scheduled bills and income', href: '/dashboard/planned-items' },
-        { icon: Tag, label: 'Categories', value: 'Organize spending and income', href: '/dashboard/categories' },
-        { icon: Wallet, label: 'Budgets', value: 'Set monthly limits by category', href: '/dashboard/budgets' },
+        { iconBg: 'bg-[#1e2a22]', iconColor: 'text-[#8bff62]', icon: Shapes, label: 'Recurring items', value: 'Upcoming scheduled bills and income', href: '/dashboard/planned-items' },
+        { iconBg: 'bg-[#231b33]', iconColor: 'text-[#c89dff]', icon: Tag, label: 'Categories', value: 'Organize spending and income', href: '/dashboard/categories' },
+        { iconBg: 'bg-[#2a2518]', iconColor: 'text-[#ffc857]', icon: Wallet, label: 'Budgets', value: 'Set monthly limits by category', href: '/dashboard/budgets' },
       ]
     },
     {
       title: 'App',
       items: [
-        { icon: Sparkles, label: 'AI Chat', value: 'Natural-language command assistant', href: '#' },
-        { icon: Globe, label: 'Preferences', value: 'Currency, appearance, and defaults', href: '#' },
+        { iconBg: 'bg-[#16231b]', iconColor: 'text-[#8bff62]', icon: Bot, label: 'AI Chat', value: 'Natural-language command assistant', href: '#' },
+        { iconBg: 'bg-[#18221d]', iconColor: 'text-[#41d6b2]', icon: Globe, label: 'Preferences', value: 'Currency, appearance, and defaults', href: '#' },
       ]
     },
     {
       title: 'Preferences',
       items: [
-        { icon: Globe, label: 'Currency', value: 'PHP (₱)', href: '#' },
-        { icon: Bell, label: 'Notifications', value: 'Enabled', href: '#' },
-        { icon: Shield, label: 'Privacy & Security', href: '#' },
+        { iconBg: 'bg-[#18221d]', iconColor: 'text-[#41d6b2]', icon: Globe, label: 'Currency', value: 'PHP (₱)', href: '#' },
+        { iconBg: 'bg-[#1a262d]', iconColor: 'text-[#5aa9ff]', icon: Bell, label: 'Notifications', value: 'Enabled', href: '#' },
+        { iconBg: 'bg-[#1a2c1f]', iconColor: 'text-[#8bff62]', icon: Shield, label: 'Privacy & Security', href: '#' },
       ]
     },
     {
       title: 'Support',
       items: [
-        { icon: MessageSquare, label: 'Send Feedback', href: '#' },
+        { iconBg: 'bg-[#1e1c2e]', iconColor: 'text-[#a084ff]', icon: MessageSquare, label: 'Send Feedback', href: '#' },
       ]
     }
   ]
@@ -145,6 +157,8 @@ export default function SettingsPage() {
                 <SettingsRow
                   key={item.label}
                   icon={item.icon}
+                  iconBg={item.iconBg}
+                  iconColor={item.iconColor}
                   label={item.label}
                   value={item.value}
                   href={item.href}

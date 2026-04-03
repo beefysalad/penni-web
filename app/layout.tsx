@@ -7,7 +7,6 @@ import { ThemeProvider } from './providers/theme-provider'
 
 import { Toaster } from 'sonner'
 
-
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -19,7 +18,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Penni Web',
+  title: 'Penni Finance',
   description: 'Penni on the web. A calm, finance-first dashboard experience.',
 }
 
@@ -30,7 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <ClerkProvider>
           <ThemeProvider
             attribute="class"
@@ -42,7 +43,6 @@ export default function RootLayout({
               {children}
               <Toaster richColors position="bottom-center" />
             </QueryProvider>
-          
           </ThemeProvider>
         </ClerkProvider>
       </body>

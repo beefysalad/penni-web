@@ -11,30 +11,37 @@ import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
 import { Pill } from '@/components/ui/pill'
 import { cn } from '@/lib/utils'
-import { useTransactionsQuery, useCreateTransactionMutation, useDeleteTransactionMutation } from '@/hooks/finance/use-transactions-query'
+import {
+  useTransactionsQuery,
+  useCreateTransactionMutation,
+  useCreateTransferMutation,
+  useDeleteTransactionMutation,
+} from '@/hooks/finance/use-transactions-query'
 import { useAccountsQuery } from '@/hooks/finance/use-accounts-query'
 import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { groupTransactionsIntoSections } from '@/lib/selectors'
 import { TYPE_FILTERS, type TypeFilter } from '@/lib/constants'
 import type { CategoryType } from '@/lib/finance.types'
 import Link from 'next/link'
-import { ReceiptText, Search, Plus, Trash2, ArrowUpRight, ArrowDownLeft, WalletCards, Calendar } from 'lucide-react'
+import { ReceiptText, Search, Plus, Trash2, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, WalletCards, Calendar } from 'lucide-react'
 
 type TransactionForm = {
-  type: CategoryType
+  mode: 'EXPENSE' | 'INCOME' | 'TRANSFER'
   title: string
   amount: string
   accountId: string
+  toAccountId: string
   categoryId: string
   transactionAt: string
   notes: string
 }
 
 const DEFAULT_FORM: TransactionForm = {
-  type: 'EXPENSE',
+  mode: 'EXPENSE',
   title: '',
   amount: '',
   accountId: '',
+  toAccountId: '',
   categoryId: '',
   transactionAt: new Date().toISOString().slice(0, 10),
   notes: '',
@@ -50,6 +57,7 @@ export default function ActivityPage() {
   const expenseCategoriesQuery = useCategoriesQuery('EXPENSE')
   const incomeCategoriesQuery = useCategoriesQuery('INCOME')
   const createTransactionMutation = useCreateTransactionMutation()
+  const createTransferMutation = useCreateTransferMutation()
   const deleteTransactionMutation = useDeleteTransactionMutation()
 
   const [activeTypeFilter, setActiveTypeFilter] = useState<TypeFilter>('All')
@@ -59,7 +67,15 @@ export default function ActivityPage() {
 
   const allTransactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data])
   const accounts = accountsQuery.data ?? []
-  const categories = form.type === 'INCOME' ? incomeCategoriesQuery.data ?? [] : expenseCategoriesQuery.data ?? []
+  const transferSourceAccounts = useMemo(
+    () => accounts.filter((account) => account.type !== 'CREDIT_CARD'),
+    [accounts]
+  )
+  const categories = form.mode === 'INCOME' ? incomeCategoriesQuery.data ?? [] : expenseCategoriesQuery.data ?? []
+  const cashFlowTransactions = useMemo(
+    () => allTransactions.filter((transaction) => transaction.source !== 'TRANSFER'),
+    [allTransactions]
+  )
 
   const filteredTransactions = useMemo(() => {
     return allTransactions.filter((t) => {
@@ -76,12 +92,12 @@ export default function ActivityPage() {
 
   const sections = useMemo(() => groupTransactionsIntoSections(filteredTransactions), [filteredTransactions])
   const totalIncome = useMemo(
-    () => allTransactions.filter((transaction) => transaction.type === 'INCOME').reduce((sum, transaction) => sum + Number(transaction.amount), 0),
-    [allTransactions]
+    () => cashFlowTransactions.filter((transaction) => transaction.type === 'INCOME').reduce((sum, transaction) => sum + Number(transaction.amount), 0),
+    [cashFlowTransactions]
   )
   const totalExpense = useMemo(
-    () => allTransactions.filter((transaction) => transaction.type === 'EXPENSE').reduce((sum, transaction) => sum + Number(transaction.amount), 0),
-    [allTransactions]
+    () => cashFlowTransactions.filter((transaction) => transaction.type === 'EXPENSE').reduce((sum, transaction) => sum + Number(transaction.amount), 0),
+    [cashFlowTransactions]
   )
   const netCashFlow = totalIncome - totalExpense
 
@@ -89,13 +105,48 @@ export default function ActivityPage() {
     const title = form.title.trim()
     const amount = Number(form.amount)
 
-    if (!title) {
-      toast.error('Transaction title is required.')
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Enter a valid amount.')
       return
     }
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error('Enter a valid amount.')
+    if (form.mode === 'TRANSFER') {
+      if (!form.accountId || !form.toAccountId) {
+        toast.error('Choose both the source and destination accounts.')
+        return
+      }
+
+      if (form.accountId === form.toAccountId) {
+        toast.error('Pick two different accounts for this transfer.')
+        return
+      }
+
+      createTransferMutation.mutate(
+        {
+          fromAccountId: form.accountId,
+          toAccountId: form.toAccountId,
+          title: title || undefined,
+          notes: form.notes.trim() || undefined,
+          amount: amount.toFixed(2),
+          transactionAt: toIsoDate(form.transactionAt),
+        },
+        {
+          onSuccess: () => {
+            toast.success('Transfer recorded.')
+            setForm((current) => ({ ...DEFAULT_FORM, mode: current.mode, transactionAt: current.transactionAt }))
+            setShowComposer(false)
+          },
+          onError: (error) => {
+            toast.error(error instanceof Error ? error.message : 'Could not create transfer.')
+          },
+        }
+      )
+
+      return
+    }
+
+    if (!title) {
+      toast.error('Transaction title is required.')
       return
     }
 
@@ -103,7 +154,7 @@ export default function ActivityPage() {
       {
         accountId: form.accountId || undefined,
         categoryId: form.categoryId || undefined,
-        type: form.type,
+        type: form.mode as CategoryType,
         title,
         notes: form.notes.trim() || undefined,
         amount: amount.toFixed(2),
@@ -113,7 +164,7 @@ export default function ActivityPage() {
       {
         onSuccess: () => {
           toast.success(`${title} added to activity.`)
-          setForm((current) => ({ ...DEFAULT_FORM, type: current.type, transactionAt: current.transactionAt }))
+          setForm((current) => ({ ...DEFAULT_FORM, mode: current.mode, transactionAt: current.transactionAt }))
           setShowComposer(false)
         },
         onError: (error) => {
@@ -125,7 +176,7 @@ export default function ActivityPage() {
 
   const composerContent = (
     <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Quick capture</p>
           <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">Add a transaction</h2>
@@ -135,17 +186,61 @@ export default function ActivityPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-2">
-        <div className="space-y-2">
+      <div className="mt-6 grid gap-4 xl:grid-cols-2 max-lg:mt-0">
+        <div className="space-y-2 lg:hidden">
+          <Label>Type</Label>
+          <div className="flex rounded-[20px] bg-[#0d1411] p-1.5">
+            {(['EXPENSE', 'INCOME', 'TRANSFER'] as const).map((item) => {
+              const selected = form.mode === item
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() =>
+                    setForm((current) => {
+                      const isValidTransferSrc = item === 'TRANSFER' ? transferSourceAccounts.some((a) => a.id === current.accountId) : true;
+                      return {
+                        ...current,
+                        mode: item,
+                        categoryId: '',
+                        accountId: isValidTransferSrc ? current.accountId : '',
+                      };
+                    })
+                  }
+                  className={cn(
+                    'flex-1 rounded-[16px] px-4 py-3 text-[15px] font-semibold transition',
+                    selected ? 'bg-[#8bff62] text-[#07110a]' : 'text-[#97a49c]'
+                  )}
+                >
+                  {item === 'EXPENSE' ? 'Expense' : item === 'INCOME' ? 'Income' : 'Transfer'}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-2 hidden lg:block">
           <Label htmlFor="transaction-type">Type</Label>
           <select
             id="transaction-type"
-            value={form.type}
-            onChange={(e) => setForm((current) => ({ ...current, type: e.target.value as CategoryType, categoryId: '' }))}
+            value={form.mode}
+            onChange={(e) =>
+              setForm((current) => {
+                const newMode = e.target.value as TransactionForm['mode'];
+                const isValidTransferSrc = newMode === 'TRANSFER' ? transferSourceAccounts.some((a) => a.id === current.accountId) : true;
+                return {
+                  ...current,
+                  mode: newMode,
+                  categoryId: '',
+                  accountId: isValidTransferSrc ? current.accountId : '',
+                };
+              })
+            }
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
             <option value="EXPENSE">Expense</option>
             <option value="INCOME">Income</option>
+            <option value="TRANSFER">Transfer</option>
           </select>
         </div>
 
@@ -155,8 +250,17 @@ export default function ActivityPage() {
         </div>
 
         <div className="space-y-2 xl:col-span-2">
-          <Label htmlFor="transaction-title">Title</Label>
-          <Input id="transaction-title" value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} placeholder="e.g. Groceries, Salary, Internet bill" />
+          <Label htmlFor="transaction-title">{form.mode === 'TRANSFER' ? 'Label' : 'Title'}</Label>
+          <Input
+            id="transaction-title"
+            value={form.title}
+            onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))}
+            placeholder={
+              form.mode === 'TRANSFER'
+                ? 'e.g. ATM withdrawal, Move to savings'
+                : 'e.g. Groceries, Salary, Internet bill'
+            }
+          />
         </div>
 
         <div className="space-y-2">
@@ -165,34 +269,51 @@ export default function ActivityPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="transaction-account">Account</Label>
+          <Label htmlFor="transaction-account">{form.mode === 'TRANSFER' ? 'From account' : 'Account'}</Label>
           <select
             id="transaction-account"
             value={form.accountId}
             onChange={(e) => setForm((current) => ({ ...current, accountId: e.target.value }))}
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
-            <option value="">Optional account</option>
-            {accounts.map((account) => (
+            <option value="">{form.mode === 'TRANSFER' ? 'Choose source account' : 'Optional account'}</option>
+            {(form.mode === 'TRANSFER' ? transferSourceAccounts : accounts).map((account) => (
               <option key={account.id} value={account.id}>{account.name}</option>
             ))}
           </select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="transaction-category">Category</Label>
-          <select
-            id="transaction-category"
-            value={form.categoryId}
-            onChange={(e) => setForm((current) => ({ ...current, categoryId: e.target.value }))}
-            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
-          >
-            <option value="">Optional category</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>{category.name}</option>
-            ))}
-          </select>
-        </div>
+        {form.mode === 'TRANSFER' ? (
+          <div className="space-y-2">
+            <Label htmlFor="transaction-to-account">To account</Label>
+            <select
+              id="transaction-to-account"
+              value={form.toAccountId}
+              onChange={(e) => setForm((current) => ({ ...current, toAccountId: e.target.value }))}
+              className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+            >
+              <option value="">Choose destination account</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>{account.name}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="transaction-category">Category</Label>
+            <select
+              id="transaction-category"
+              value={form.categoryId}
+              onChange={(e) => setForm((current) => ({ ...current, categoryId: e.target.value }))}
+              className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+            >
+              <option value="">Optional category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="space-y-2 xl:col-span-2">
           <Label htmlFor="transaction-notes">Notes</Label>
@@ -201,8 +322,12 @@ export default function ActivityPage() {
       </div>
 
       <div className="mt-6 flex gap-3">
-        <Button onClick={handleCreateTransaction} disabled={createTransactionMutation.isPending}>
-          {createTransactionMutation.isPending ? 'Saving...' : 'Save transaction'}
+        <Button onClick={handleCreateTransaction} disabled={createTransactionMutation.isPending || createTransferMutation.isPending}>
+          {createTransactionMutation.isPending || createTransferMutation.isPending
+            ? 'Saving...'
+            : form.mode === 'TRANSFER'
+              ? 'Save transfer'
+              : 'Save transaction'}
         </Button>
         <Button variant="secondary" onClick={() => setShowComposer(false)}>Cancel</Button>
       </div>
@@ -242,7 +367,7 @@ export default function ActivityPage() {
               </div>
             </div>
 
-            <div className="mt-6 flex flex-row gap-3">
+            <div className="mt-6 grid gap-3 md:grid-cols-3">
               <div className="flex-1 rounded-[24px] bg-[#18221d] p-4">
                 <div className="flex size-10 items-center justify-center rounded-full bg-[#1f3325]">
                   <ArrowUpRight className="size-5 text-[#41d6b2]" />
@@ -260,6 +385,16 @@ export default function ActivityPage() {
                 <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#93a19a] uppercase">Expenses</p>
                 <p className="mt-2 text-[17px] leading-tight font-bold text-[#ff8a94]">
                   ₱{totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+
+              <div className="flex-1 rounded-[24px] bg-[#1f1b0f] p-4">
+                <div className="flex size-10 items-center justify-center rounded-full bg-[#2a2412]">
+                  <ArrowRightLeft className="size-5 text-[#ffd66b]" />
+                </div>
+                <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#c7b27a] uppercase">Transfers</p>
+                <p className="mt-2 text-[17px] leading-tight font-bold text-[#f5deb3]">
+                  Balance moves only
                 </p>
               </div>
             </div>
@@ -374,8 +509,8 @@ export default function ActivityPage() {
       <MobileSheet
         open={showComposer}
         onClose={() => setShowComposer(false)}
-        title="New transaction"
-        description="Capture an entry without leaving the feed."
+        eyebrow="Quick capture"
+        title={`New ${form.mode === 'INCOME' ? 'income' : form.mode === 'TRANSFER' ? 'transfer' : 'expense'}`}
       >
         {composerContent}
       </MobileSheet>

@@ -1,7 +1,14 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createTransaction, deleteTransaction, listTransactions, type CreateTransactionInput } from '@/api/finance/transactions.api'
+import {
+  createTransaction,
+  createTransfer,
+  deleteTransaction,
+  listTransactions,
+  type CreateTransactionInput,
+  type CreateTransferInput,
+} from '@/api/finance/transactions.api'
 import { useAuthenticatedRequest } from '@/hooks/use-authenticated-request'
 import { financeQueryKeys } from '@/hooks/finance/query-keys'
 import type { Transaction } from '@/lib/finance.types'
@@ -22,6 +29,20 @@ export function useCreateTransactionMutation() {
   return useMutation({
     mutationFn: (input: CreateTransactionInput) =>
       authenticatedRequest((token) => createTransaction(token, input)),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      await queryClient.invalidateQueries({ queryKey: ['accounts'] })
+    },
+  })
+}
+
+export function useCreateTransferMutation() {
+  const authenticatedRequest = useAuthenticatedRequest()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: CreateTransferInput) =>
+      authenticatedRequest((token) => createTransfer(token, input)),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['transactions'] })
       await queryClient.invalidateQueries({ queryKey: ['accounts'] })

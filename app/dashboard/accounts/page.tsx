@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Pill } from '@/components/ui/pill'
 import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
+import { cn } from '@/lib/utils'
 import {
   useAccountsQuery,
   useCreateAccountMutation,
@@ -150,7 +151,7 @@ export default function AccountsPage() {
 
   const composerContent = (
     <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
             {editingAccountId ? 'Edit account' : 'Add account'}
@@ -167,7 +168,30 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-2">
+      <div className="mt-6 grid gap-4 xl:grid-cols-2 max-lg:mt-0">
+        <div className="space-y-2 xl:col-span-2 lg:hidden">
+          <Label>Type</Label>
+          <div className="flex flex-wrap gap-2">
+            {ACCOUNT_TYPE_OPTIONS.map((option) => {
+              const selected = form.type === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setForm((c) => ({ ...c, type: option.value }))}
+                  className={cn(
+                    'rounded-full border px-4 py-2.5 text-[14px] font-semibold transition',
+                    selected
+                      ? 'border-[#8bff62] bg-[#132117] text-[#8bff62]'
+                      : 'border-[#17211c] bg-[#0d1411] text-[#dce2de]'
+                  )}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
         <div className="space-y-2 xl:col-span-2">
           <Label htmlFor="account-name">Account name</Label>
           <Input
@@ -184,7 +208,7 @@ export default function AccountsPage() {
             id="account-type"
             value={form.type}
             onChange={(e) => setForm((c) => ({ ...c, type: e.target.value as AccountType }))}
-            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+            className="hidden h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30 lg:block"
           >
             {ACCOUNT_TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -394,8 +418,8 @@ export default function AccountsPage() {
       <MobileSheet
         open={showComposer}
         onClose={resetForm}
-        title={editingAccountId ? 'Edit account' : 'New account'}
-        description="Manage wallets, balances, and credit limits without leaving the page."
+        eyebrow="Accounts"
+        title={editingAccountId ? 'Edit account' : 'Add account'}
       >
         {composerContent}
       </MobileSheet>
