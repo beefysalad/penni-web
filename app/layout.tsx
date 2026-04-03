@@ -41,7 +41,22 @@ export default function RootLayout({
           >
             <QueryProvider>
               {children}
-              <Toaster richColors position="bottom-center" />
+              <Toaster 
+                closeButton
+                position="bottom-center"
+                toastOptions={{
+                  classNames: {
+                    toast: 'border border-[#1b2a21] bg-[#111916] text-[#f4f7f5]',
+                    title: 'text-[14px] font-bold',
+                    description: 'text-[#93a19a]',
+                    success: 'border-[#1f3325] bg-[#121c16] text-[#41d6b2]',
+                    error: 'border-[#311d22] bg-[#1d1518] text-[#ff8a94]',
+                    warning: 'border-[#2a2412] bg-[#1f1b0f] text-[#ffd66b]',
+                    info: 'border-[#1b2a21] bg-[#111916] text-[#f4f7f5]',
+                    closeButton: '!bg-[#18221d] !border-[#202c26] !text-[#f4f7f5] hover:!bg-[#2a3a31] transition-colors',
+                  }
+                }}
+              />
             </QueryProvider>
           </ThemeProvider>
         </ClerkProvider>
