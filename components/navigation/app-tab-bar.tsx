@@ -60,7 +60,7 @@ export function AppTabBar() {
           className="flex items-center gap-3 rounded-[22px] px-3 py-2"
         >
           <Image
-            src="/penniLogo.webp"
+            src="/PenniLogo.webp"
             width={44}
             height={44}
             alt="Penni Logo"
