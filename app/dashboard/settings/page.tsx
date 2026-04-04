@@ -32,9 +32,10 @@ interface SettingsRowProps {
   isLast?: boolean
   destructive?: boolean
   as?: 'button' | 'div'
+  comingSoon?: boolean
 }
 
-function SettingsRow({ icon: Icon, iconBg, iconColor, label, value, href, onClick, isLast, destructive, as = 'button' }: SettingsRowProps) {
+function SettingsRow({ icon: Icon, iconBg, iconColor, label, value, href, onClick, isLast, destructive, as = 'button', comingSoon = false }: SettingsRowProps) {
   const content = (
     <div className={cn(
       "flex flex-row items-start gap-4 px-4 py-4 transition-colors hover:bg-white/5 md:items-center md:px-6",
@@ -57,6 +58,11 @@ function SettingsRow({ icon: Icon, iconBg, iconColor, label, value, href, onClic
         ) : null}
       </div>
       <div className="flex shrink-0 flex-row items-center gap-2 self-center md:w-[250px] md:justify-end">
+        {comingSoon ? (
+          <span className="rounded-full bg-[#2a2518] px-3 py-1 text-[10px] font-bold uppercase tracking-[1.6px] text-[#ffc857]">
+            Coming soon
+          </span>
+        ) : null}
         {value ? (
           <span className="hidden max-w-[220px] text-right text-[14px] leading-6 font-medium text-[#93a19a] md:inline">
             {value}
@@ -87,22 +93,22 @@ export default function SettingsPage() {
     {
       title: 'App',
       items: [
-        { iconBg: 'bg-[#16231b]', iconColor: 'text-[#8bff62]', icon: Bot, label: 'AI Chat', value: 'Natural-language command assistant', href: '#' },
-        { iconBg: 'bg-[#18221d]', iconColor: 'text-[#41d6b2]', icon: Globe, label: 'Preferences', value: 'Currency, appearance, and defaults', href: '#' },
+        { iconBg: 'bg-[#16231b]', iconColor: 'text-[#8bff62]', icon: Bot, label: 'AI Chat', value: 'Natural-language command assistant', href: '#', comingSoon: true },
+        { iconBg: 'bg-[#18221d]', iconColor: 'text-[#41d6b2]', icon: Globe, label: 'Preferences', value: 'Currency, appearance, and defaults', href: '#', comingSoon: true },
       ]
     },
     {
       title: 'Preferences',
       items: [
-        { iconBg: 'bg-[#18221d]', iconColor: 'text-[#41d6b2]', icon: Globe, label: 'Currency', value: 'PHP (₱)', href: '#' },
-        { iconBg: 'bg-[#1a262d]', iconColor: 'text-[#5aa9ff]', icon: Bell, label: 'Notifications', value: 'Enabled', href: '#' },
-        { iconBg: 'bg-[#1a2c1f]', iconColor: 'text-[#8bff62]', icon: Shield, label: 'Privacy & Security', href: '#' },
+        { iconBg: 'bg-[#18221d]', iconColor: 'text-[#41d6b2]', icon: Globe, label: 'Currency', value: 'PHP (₱)', href: '#', comingSoon: true },
+        { iconBg: 'bg-[#1a262d]', iconColor: 'text-[#5aa9ff]', icon: Bell, label: 'Notifications', value: 'Enabled', href: '#', comingSoon: true },
+        { iconBg: 'bg-[#1a2c1f]', iconColor: 'text-[#8bff62]', icon: Shield, label: 'Privacy & Security', href: '#', comingSoon: true },
       ]
     },
     {
       title: 'Support',
       items: [
-        { iconBg: 'bg-[#1e1c2e]', iconColor: 'text-[#a084ff]', icon: MessageSquare, label: 'Send Feedback', href: '#' },
+        { iconBg: 'bg-[#1e1c2e]', iconColor: 'text-[#a084ff]', icon: MessageSquare, label: 'Send Feedback', href: '#', comingSoon: true },
       ]
     }
   ]
@@ -163,6 +169,7 @@ export default function SettingsPage() {
                   value={item.value}
                   href={item.href}
                   isLast={index === section.items.length - 1}
+                  comingSoon={item.comingSoon}
                 />
               ))}
             </div>
