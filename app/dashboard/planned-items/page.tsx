@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -171,15 +171,19 @@ export default function PlannedItemsPage() {
     handleSubmit,
     reset,
     setValue,
-    watch,
     trigger,
+    control,
     formState: { errors },
   } = useForm<PlannedItemForm>({
     resolver: zodResolver(plannedItemFormSchema),
     defaultValues: DEFAULT_PLANNED_ITEM_FORM,
   })
 
-  const form = watch()
+  const type = useWatch({ control, name: 'type' })
+  const accountId = useWatch({ control, name: 'accountId' })
+  const recurrence = useWatch({ control, name: 'recurrence' })
+  const title = useWatch({ control, name: 'title' })
+  const amount = useWatch({ control, name: 'amount' })
 
   const accounts = accountsQuery.data ?? []
   const plannedItems = plannedItemsQuery.data ?? []
@@ -200,9 +204,9 @@ export default function PlannedItemsPage() {
   )
 
   const selectedAccount =
-    accounts.find((account) => account.id === form.accountId) ?? null
-  const requiresAccount = form.type === 'INCOME'
-  const isSemiMonthly = form.recurrence === 'SEMI_MONTHLY'
+    accounts.find((account) => account.id === accountId) ?? null
+  const requiresAccount = type === 'INCOME'
+  const isSemiMonthly = recurrence === 'SEMI_MONTHLY'
   const isLoading =
     plannedItemsQuery.isLoading || accountsQuery.isLoading || transactionsQuery.isLoading
 
@@ -433,7 +437,7 @@ export default function PlannedItemsPage() {
           <Label>Type</Label>
           <div className="flex rounded-[20px] bg-[#0d1411] p-1.5">
             {(['EXPENSE', 'INCOME'] as const).map((item) => {
-              const selected = form.type === item
+              const selected = type === item
               return (
                 <button
                   key={item}
@@ -458,7 +462,7 @@ export default function PlannedItemsPage() {
           <Label htmlFor="planned-type">Type</Label>
           <select
             id="planned-type"
-            value={form.type}
+            value={type}
             onChange={async (event) => {
               setValue('type', event.target.value as CategoryType, {
                 shouldDirty: true,
@@ -475,7 +479,7 @@ export default function PlannedItemsPage() {
 
         <div className="space-y-2">
           <Label htmlFor="planned-date">
-            {form.type === 'INCOME'
+            {type === 'INCOME'
               ? 'First payout date'
               : 'First due date'}
           </Label>
@@ -489,13 +493,13 @@ export default function PlannedItemsPage() {
 
         <div className="space-y-2 xl:col-span-2">
           <Label htmlFor="planned-title">
-            {form.type === 'INCOME' ? 'Income name' : 'Bill name'}
+            {type === 'INCOME' ? 'Income name' : 'Bill name'}
           </Label>
           <Input
             id="planned-title"
             {...register('title')}
             placeholder={
-              form.type === 'INCOME'
+              type === 'INCOME'
                 ? 'e.g. Payroll, Freelance retainer'
                 : 'e.g. Rent, Internet, Credit card'
             }
@@ -518,11 +522,11 @@ export default function PlannedItemsPage() {
 
         <div className="space-y-2">
           <Label htmlFor="planned-account">
-            {form.type === 'INCOME' ? 'Deposit into' : 'Pay from'}
+            {type === 'INCOME' ? 'Deposit into' : 'Pay from'}
           </Label>
           <select
             id="planned-account"
-            value={form.accountId}
+            value={accountId}
             onChange={(event) =>
               setValue('accountId', event.target.value, {
                 shouldDirty: true,
@@ -543,7 +547,7 @@ export default function PlannedItemsPage() {
           </select>
           {selectedAccount ? (
             <p className="text-[12px] font-medium text-[#7f8c86]">
-              {form.type === 'INCOME'
+              {type === 'INCOME'
                 ? 'Will land in'
                 : 'Planned against'}{' '}
               {selectedAccount.name}.
@@ -556,7 +560,7 @@ export default function PlannedItemsPage() {
           <Label htmlFor="planned-recurrence">Repeat every</Label>
           <select
             id="planned-recurrence"
-            value={form.recurrence}
+            value={recurrence}
             onChange={async (event) => {
               setValue('recurrence', event.target.value as RecurrenceFrequency, {
                 shouldDirty: true,
@@ -607,15 +611,15 @@ export default function PlannedItemsPage() {
           Preview
         </p>
         <p className="mt-2 text-[16px] font-bold text-[#f4f7f5]">
-          {form.title.trim() || 'Your recurring item'}
+          {title?.trim() || 'Your recurring item'}
         </p>
         <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
-          {form.amount
-            ? formatCurrency(Number(form.amount) || 0)
+          {amount
+            ? formatCurrency(Number(amount) || 0)
             : '₱0.00'}{' '}
           •{' '}
           {RECURRENCE_OPTIONS.find(
-            (option) => option.value === form.recurrence
+            (option) => option.value === recurrence
           )?.label ?? 'Every month'}
         </p>
       </div>
