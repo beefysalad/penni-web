@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -125,15 +125,18 @@ export default function ActivityPage() {
     handleSubmit,
     reset,
     setValue,
-    watch,
     trigger,
+    control,
     formState: { errors },
   } = useForm<TransactionForm>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues: DEFAULT_FORM,
   })
 
-  const form = watch()
+  const mode = useWatch({ control, name: 'mode' })
+  const accountId = useWatch({ control, name: 'accountId' })
+  const toAccountId = useWatch({ control, name: 'toAccountId' })
+  const categoryId = useWatch({ control, name: 'categoryId' })
 
   const allTransactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data])
   const accounts = accountsQuery.data ?? []
@@ -141,7 +144,7 @@ export default function ActivityPage() {
     () => accounts.filter((account) => account.type !== 'CREDIT_CARD'),
     [accounts]
   )
-  const categories = form.mode === 'INCOME' ? incomeCategoriesQuery.data ?? [] : expenseCategoriesQuery.data ?? []
+  const categories = mode === 'INCOME' ? incomeCategoriesQuery.data ?? [] : expenseCategoriesQuery.data ?? []
   const cashFlowTransactions = useMemo(
     () => allTransactions.filter((transaction) => transaction.source !== 'TRANSFER'),
     [allTransactions]
@@ -172,18 +175,18 @@ export default function ActivityPage() {
   const netCashFlow = totalIncome - totalExpense
 
   useEffect(() => {
-    if (form.mode !== 'TRANSFER') {
+    if (mode !== 'TRANSFER') {
       return
     }
 
-    if (form.accountId && !transferSourceAccounts.some((account) => account.id === form.accountId)) {
+    if (accountId && !transferSourceAccounts.some((account) => account.id === accountId)) {
       setValue('accountId', '', {
         shouldDirty: true,
         shouldTouch: true,
         shouldValidate: true,
       })
     }
-  }, [form.mode, form.accountId, setValue, transferSourceAccounts])
+  }, [mode, accountId, setValue, transferSourceAccounts])
 
   const handleCreateTransaction = (values: TransactionForm) => {
     const title = values.title.trim()
@@ -254,16 +257,16 @@ export default function ActivityPage() {
           <Label>Type</Label>
           <div className="flex rounded-[20px] bg-[#0d1411] p-1.5">
             {(['EXPENSE', 'INCOME', 'TRANSFER'] as const).map((item) => {
-              const selected = form.mode === item
+              const selected = mode === item
               return (
                 <button
                   key={item}
                   type="button"
                   onClick={async () => {
                     const nextAccountId =
-                      item === 'TRANSFER' && !transferSourceAccounts.some((a) => a.id === form.accountId)
+                      item === 'TRANSFER' && !transferSourceAccounts.some((a) => a.id === accountId)
                         ? ''
-                        : form.accountId
+                        : accountId
                     setValue('mode', item, { shouldDirty: true, shouldTouch: true })
                     setValue('categoryId', '', { shouldDirty: true })
                     setValue('accountId', nextAccountId, { shouldDirty: true })
@@ -285,13 +288,13 @@ export default function ActivityPage() {
           <Label htmlFor="transaction-type">Type</Label>
           <select
             id="transaction-type"
-            value={form.mode}
+            value={mode}
             onChange={async (e) => {
               const newMode = e.target.value as TransactionForm['mode']
               const nextAccountId =
-                newMode === 'TRANSFER' && !transferSourceAccounts.some((a) => a.id === form.accountId)
+                newMode === 'TRANSFER' && !transferSourceAccounts.some((a) => a.id === accountId)
                   ? ''
-                  : form.accountId
+                  : accountId
               setValue('mode', newMode, { shouldDirty: true, shouldTouch: true })
               setValue('categoryId', '', { shouldDirty: true })
               setValue('accountId', nextAccountId, { shouldDirty: true })
@@ -312,12 +315,12 @@ export default function ActivityPage() {
         </div>
 
         <div className="space-y-2 xl:col-span-2">
-          <Label htmlFor="transaction-title">{form.mode === 'TRANSFER' ? 'Label' : 'Title'}</Label>
+          <Label htmlFor="transaction-title">{mode === 'TRANSFER' ? 'Label' : 'Title'}</Label>
           <Input
             id="transaction-title"
             {...register('title')}
             placeholder={
-              form.mode === 'TRANSFER'
+              mode === 'TRANSFER'
                 ? 'e.g. ATM withdrawal, Move to savings'
                 : 'e.g. Groceries, Salary, Internet bill'
             }
@@ -327,15 +330,23 @@ export default function ActivityPage() {
 
         <div className="space-y-2">
           <Label htmlFor="transaction-amount">Amount</Label>
-          <Input id="transaction-amount" type="number" {...register('amount')} placeholder="0.00" />
+          <Input
+            id="transaction-amount"
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            {...register('amount')}
+            placeholder="0.00"
+          />
           <FormErrorMessage message={errors.amount?.message} />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="transaction-account">{form.mode === 'TRANSFER' ? 'From account' : 'Account'}</Label>
+          <Label htmlFor="transaction-account">{mode === 'TRANSFER' ? 'From account' : 'Account'}</Label>
           <select
             id="transaction-account"
-            value={form.accountId}
+            value={accountId}
             onChange={(e) =>
               setValue('accountId', e.target.value, {
                 shouldDirty: true,
@@ -345,20 +356,20 @@ export default function ActivityPage() {
             }
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
-            <option value="">{form.mode === 'TRANSFER' ? 'Choose source account' : 'Optional account'}</option>
-            {(form.mode === 'TRANSFER' ? transferSourceAccounts : accounts).map((account) => (
+            <option value="">{mode === 'TRANSFER' ? 'Choose source account' : 'Optional account'}</option>
+            {(mode === 'TRANSFER' ? transferSourceAccounts : accounts).map((account) => (
               <option key={account.id} value={account.id}>{account.name}</option>
             ))}
           </select>
           <FormErrorMessage message={errors.accountId?.message} />
         </div>
 
-        {form.mode === 'TRANSFER' ? (
+        {mode === 'TRANSFER' ? (
           <div className="space-y-2">
             <Label htmlFor="transaction-to-account">To account</Label>
             <select
               id="transaction-to-account"
-              value={form.toAccountId}
+              value={toAccountId}
               onChange={(e) =>
                 setValue('toAccountId', e.target.value, {
                   shouldDirty: true,
@@ -380,7 +391,7 @@ export default function ActivityPage() {
             <Label htmlFor="transaction-category">Category</Label>
             <select
               id="transaction-category"
-              value={form.categoryId}
+              value={categoryId}
               onChange={(e) =>
                 setValue('categoryId', e.target.value, {
                   shouldDirty: true,
@@ -408,7 +419,7 @@ export default function ActivityPage() {
         <Button onClick={handleSubmit(handleCreateTransaction)} disabled={createTransactionMutation.isPending || createTransferMutation.isPending}>
           {createTransactionMutation.isPending || createTransferMutation.isPending
             ? 'Saving...'
-            : form.mode === 'TRANSFER'
+            : mode === 'TRANSFER'
               ? 'Save transfer'
               : 'Save transaction'}
         </Button>
@@ -601,7 +612,7 @@ export default function ActivityPage() {
         open={showComposer}
         onClose={() => setShowComposer(false)}
         eyebrow="Quick capture"
-        title={`New ${form.mode === 'INCOME' ? 'income' : form.mode === 'TRANSFER' ? 'transfer' : 'expense'}`}
+        title={`New ${mode === 'INCOME' ? 'income' : mode === 'TRANSFER' ? 'transfer' : 'expense'}`}
       >
         {composerContent}
       </MobileSheet>
