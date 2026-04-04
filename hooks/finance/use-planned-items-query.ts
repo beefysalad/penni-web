@@ -2,9 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  completePlannedItem,
   createPlannedItem,
   deletePlannedItem,
   listPlannedItems,
+  type CompletePlannedItemInput,
   type CreatePlannedItemInput,
   type ListPlannedItemsParams,
 } from '@/api/finance/planned-items.api'
@@ -60,6 +62,21 @@ export function useDeletePlannedItemMutation() {
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ['planned-items'] })
+    },
+  })
+}
+
+export function useCompletePlannedItemMutation() {
+  const authenticatedRequest = useAuthenticatedRequest()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input?: CompletePlannedItemInput }) =>
+      authenticatedRequest((token) => completePlannedItem(token, id, input)),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['planned-items'] })
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      await queryClient.invalidateQueries({ queryKey: ['accounts'] })
     },
   })
 }

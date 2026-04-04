@@ -163,7 +163,7 @@ export function PenniLanding() {
             className="flex items-center gap-4 transition-opacity hover:opacity-80"
           >
             <Image
-              src="/penniLogo.webp"
+              src="/PenniLogo.webp"
               width={56}
               height={56}
               alt="Penni Logo"
@@ -336,7 +336,7 @@ export function PenniLanding() {
           <div className="flex flex-col items-center justify-between gap-8 md:flex-row">
             <div className="flex items-center gap-3">
               <Image
-                src="/penniLogo.webp"
+                src="/PenniLogo.webp"
                 width={40}
                 height={40}
                 alt="Penni Logo"

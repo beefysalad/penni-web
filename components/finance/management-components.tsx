@@ -97,10 +97,18 @@ function formatRecurrenceLabel(item: PlannedItem) {
 
 export function PlannedItemRow({
   item,
+  scheduledFor,
+  statusLabel,
+  statusTone = 'neutral',
+  helperText,
   isLast,
   action,
 }: {
   item: PlannedItem
+  scheduledFor?: string
+  statusLabel?: string
+  statusTone?: 'danger' | 'success' | 'neutral'
+  helperText?: string
   isLast?: boolean
   action?: ReactNode
 }) {
@@ -123,10 +131,30 @@ export function PlannedItemRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-bold text-[#f4f7f5]">{item.title}</p>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] font-medium text-[#7f8c86]">
-          <span>{formatCompactDate(item.nextOccurrenceAt ?? item.startDate)}</span>
+          <span>{formatCompactDate(scheduledFor ?? item.nextOccurrenceAt ?? item.startDate)}</span>
           <span className="text-[#314238]">•</span>
           <span>{formatRecurrenceLabel(item)}</span>
+          {statusLabel ? (
+            <>
+              <span className="text-[#314238]">•</span>
+              <span
+                className={cn(
+                  'font-bold uppercase tracking-[1.2px]',
+                  statusTone === 'danger'
+                    ? 'text-[#ff8a94]'
+                    : statusTone === 'success'
+                      ? 'text-[#41d6b2]'
+                      : 'text-[#ffc857]'
+                )}
+              >
+                {statusLabel}
+              </span>
+            </>
+          ) : null}
         </div>
+        {helperText ? (
+          <p className="mt-1 text-[12px] font-medium text-[#93a19a]">{helperText}</p>
+        ) : null}
       </div>
       <div className="flex items-center gap-3">
         <p className={cn('text-[15px] font-bold', isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]')}>

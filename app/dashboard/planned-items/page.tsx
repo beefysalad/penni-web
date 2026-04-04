@@ -20,15 +20,21 @@ import {
 import { useAccountsQuery } from '@/hooks/finance/use-accounts-query'
 import {
   useCreatePlannedItemMutation,
+  useCompletePlannedItemMutation,
   useDeletePlannedItemMutation,
   usePlannedItemsQuery,
 } from '@/hooks/finance/use-planned-items-query'
+import { useTransactionsQuery } from '@/hooks/finance/use-transactions-query'
 import type {
   CategoryType,
   PlannedItem,
   RecurrenceFrequency,
 } from '@/lib/finance.types'
-import { formatCurrency } from '@/lib/formatters'
+import { formatCurrency, formatShortDate } from '@/lib/formatters'
+import {
+  getPlannedItemRecurringState,
+  type PlannedItemWithRecurringState,
+} from '@/lib/recurring'
 import { Calendar, Plus, Sparkles, Trash2 } from 'lucide-react'
 
 type PlannedItemForm = {
@@ -122,10 +128,41 @@ function toIsoDate(dateValue: string) {
   return new Date(`${dateValue}T00:00:00`).toISOString()
 }
 
+function getStatusLabel(status: PlannedItemWithRecurringState['status']) {
+  if (status === 'OVERDUE') return 'Overdue'
+  if (status === 'DUE') return 'Due today'
+  if (status === 'COMPLETE') return 'Complete'
+  return 'Upcoming'
+}
+
+function getStatusTone(status: PlannedItemWithRecurringState['status']) {
+  if (status === 'OVERDUE') return 'danger' as const
+  if (status === 'COMPLETE') return 'success' as const
+  return 'neutral' as const
+}
+
+function getHelperText(plannedItem: PlannedItemWithRecurringState) {
+  if (plannedItem.status === 'COMPLETE' && plannedItem.matchedTransaction) {
+    return `Matched ${formatShortDate(plannedItem.matchedTransaction.transactionAt)}.`
+  }
+
+  if (plannedItem.status === 'DUE') {
+    return 'Expected today. Mark it paid once the transaction lands.'
+  }
+
+  if (plannedItem.status === 'OVERDUE') {
+    return `Expected on ${formatShortDate(plannedItem.scheduledFor)}.`
+  }
+
+  return `Scheduled for ${formatShortDate(plannedItem.scheduledFor)}.`
+}
+
 export default function PlannedItemsPage() {
   const plannedItemsQuery = usePlannedItemsQuery({ isActive: true })
   const accountsQuery = useAccountsQuery()
+  const transactionsQuery = useTransactionsQuery()
   const createPlannedItemMutation = useCreatePlannedItemMutation()
+  const completePlannedItemMutation = useCompletePlannedItemMutation()
   const deletePlannedItemMutation = useDeletePlannedItemMutation()
 
   const [showComposer, setShowComposer] = useState(false)
@@ -146,21 +183,28 @@ export default function PlannedItemsPage() {
 
   const accounts = accountsQuery.data ?? []
   const plannedItems = plannedItemsQuery.data ?? []
+  const transactions = transactionsQuery.data ?? []
+
+  const plannedItemsWithState = useMemo(
+    () => plannedItems.map((item) => getPlannedItemRecurringState(item, transactions)),
+    [plannedItems, transactions]
+  )
 
   const incomeItems = useMemo(
-    () => plannedItems.filter((item) => item.type === 'INCOME'),
-    [plannedItems]
+    () => plannedItemsWithState.filter((item) => item.item.type === 'INCOME'),
+    [plannedItemsWithState]
   )
   const expenseItems = useMemo(
-    () => plannedItems.filter((item) => item.type === 'EXPENSE'),
-    [plannedItems]
+    () => plannedItemsWithState.filter((item) => item.item.type === 'EXPENSE'),
+    [plannedItemsWithState]
   )
 
   const selectedAccount =
     accounts.find((account) => account.id === form.accountId) ?? null
   const requiresAccount = form.type === 'INCOME'
   const isSemiMonthly = form.recurrence === 'SEMI_MONTHLY'
-  const isLoading = plannedItemsQuery.isLoading || accountsQuery.isLoading
+  const isLoading =
+    plannedItemsQuery.isLoading || accountsQuery.isLoading || transactionsQuery.isLoading
 
   const resetComposer = () => {
     reset(DEFAULT_PLANNED_ITEM_FORM)
@@ -219,6 +263,149 @@ export default function PlannedItemsPage() {
         )
       },
     })
+  }
+
+  const handleCompletePlannedItem = (item: PlannedItemWithRecurringState) => {
+    completePlannedItemMutation.mutate(
+      {
+        id: item.item.id,
+        input: {
+          transactionAt: new Date().toISOString(),
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(`${item.item.title} marked as paid.`)
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : 'Could not complete planned item.'
+          )
+        },
+      }
+    )
+  }
+
+  const renderPlannedItemGroup = (
+    title: string,
+    items: PlannedItemWithRecurringState[],
+    emptyState: {
+      icon: typeof Calendar
+      title: string
+      description: string
+    },
+    accentClassName: string
+  ) => {
+    const overdueItems = items.filter((item) => item.status === 'OVERDUE')
+    const dueItems = items.filter((item) => item.status === 'DUE')
+    const upcomingItems = items.filter((item) => item.status === 'UPCOMING')
+    const completedItems = items.filter((item) => item.status === 'COMPLETE')
+
+    const sections = [
+      { title: 'Overdue', items: overdueItems },
+      { title: 'Due today', items: dueItems },
+      { title: 'Upcoming', items: upcomingItems },
+      { title: 'Completed', items: completedItems },
+    ].filter((section) => section.items.length > 0)
+
+    return (
+      <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">
+              {title}
+            </h3>
+            <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
+              {title === 'Recurring expenses'
+                ? 'Bills stay expected until you confirm the payment.'
+                : 'Recurring income stays projected until the money actually lands.'}
+            </p>
+          </div>
+          <span className={cn('rounded-full px-3 py-1 text-[11px] font-bold', accentClassName)}>
+            {items.length} items
+          </span>
+        </div>
+
+        <div className="mt-5 rounded-[24px] border border-[#17211c] bg-[#111916]">
+          {isLoading ? (
+            <div className="space-y-3 p-4">
+              <div className="h-16 animate-pulse rounded-[20px] bg-[#131b17]" />
+              <div className="h-16 animate-pulse rounded-[20px] bg-[#131b17]" />
+            </div>
+          ) : sections.length > 0 ? (
+            <div className="divide-y divide-[#17211c]/60">
+              {sections.map((section) => (
+                <div key={section.title} className="p-3">
+                  <div className="px-2 pb-2">
+                    <p className="text-[11px] font-bold uppercase tracking-[1.8px] text-[#6f7c75]">
+                      {section.title}
+                    </p>
+                  </div>
+                  <div className="overflow-hidden rounded-[20px] border border-[#17211c] bg-[#0f1512]">
+                    {section.items.map((entry, index) => (
+                      <PlannedItemRow
+                        key={entry.item.id}
+                        item={entry.item}
+                        scheduledFor={entry.scheduledFor}
+                        statusLabel={getStatusLabel(entry.status)}
+                        statusTone={getStatusTone(entry.status)}
+                        helperText={getHelperText(entry)}
+                        isLast={index === section.items.length - 1}
+                        action={
+                          <div className="flex items-center gap-2">
+                            {entry.status !== 'COMPLETE' ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => handleCompletePlannedItem(entry)}
+                                disabled={completePlannedItemMutation.isPending}
+                                className="h-8 rounded-full px-3"
+                              >
+                                Mark paid
+                              </Button>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePlannedItem(entry.item)}
+                              className={cn(
+                                'flex size-8 items-center justify-center rounded-full transition',
+                                entry.item.type === 'EXPENSE'
+                                  ? 'bg-[#241719] hover:bg-[#311d22]'
+                                  : 'bg-[#16211b] hover:bg-[#1d2a20]'
+                              )}
+                              aria-label={`Delete ${entry.item.title}`}
+                            >
+                              <Trash2
+                                className={cn(
+                                  'size-4',
+                                  entry.item.type === 'EXPENSE'
+                                    ? 'text-[#ff8a94]'
+                                    : 'text-[#41d6b2]'
+                                )}
+                              />
+                            </button>
+                          </div>
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4">
+              <FinanceEmptyState
+                icon={emptyState.icon}
+                title={emptyState.title}
+                description={emptyState.description}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
   const composerContent = (
@@ -486,107 +673,29 @@ export default function PlannedItemsPage() {
         {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}
 
         <div className="space-y-6">
-          <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">
-                  Recurring expenses
-                </h3>
-                <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
-                  Bills, rent, subscriptions, and card dues.
-                </p>
-              </div>
-              <span className="rounded-full bg-[#241719] px-3 py-1 text-[11px] font-bold text-[#ff8a94]">
-                {expenseItems.length} items
-              </span>
-            </div>
+          {renderPlannedItemGroup(
+            'Recurring expenses',
+            expenseItems,
+            {
+              icon: Calendar,
+              title: 'No recurring expenses yet',
+              description:
+                'Add your first bill so the planning side of Penni starts to feel real.',
+            },
+            'bg-[#241719] text-[#ff8a94]'
+          )}
 
-            <div className="mt-5 overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
-              {isLoading ? (
-                <div className="space-y-3 p-4">
-                  <div className="h-16 animate-pulse rounded-[20px] bg-[#131b17]" />
-                  <div className="h-16 animate-pulse rounded-[20px] bg-[#131b17]" />
-                </div>
-              ) : expenseItems.length > 0 ? (
-                expenseItems.map((item, index) => (
-                  <PlannedItemRow
-                    key={item.id}
-                    item={item}
-                    isLast={index === expenseItems.length - 1}
-                    action={
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePlannedItem(item)}
-                        className="flex size-8 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
-                        aria-label={`Delete ${item.title}`}
-                      >
-                        <Trash2 className="size-4 text-[#ff8a94]" />
-                      </button>
-                    }
-                  />
-                ))
-              ) : (
-                <div className="p-4">
-                  <FinanceEmptyState
-                    icon={Calendar}
-                    title="No recurring expenses yet"
-                    description="Add your first bill so the planning side of Penni starts to feel real."
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">
-                  Recurring income
-                </h3>
-                <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
-                  Salary, allowances, and repeat payouts.
-                </p>
-              </div>
-              <span className="rounded-full bg-[#16211b] px-3 py-1 text-[11px] font-bold text-[#41d6b2]">
-                {incomeItems.length} items
-              </span>
-            </div>
-
-            <div className="mt-5 overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
-              {isLoading ? (
-                <div className="space-y-3 p-4">
-                  <div className="h-16 animate-pulse rounded-[20px] bg-[#131b17]" />
-                  <div className="h-16 animate-pulse rounded-[20px] bg-[#131b17]" />
-                </div>
-              ) : incomeItems.length > 0 ? (
-                incomeItems.map((item, index) => (
-                  <PlannedItemRow
-                    key={item.id}
-                    item={item}
-                    isLast={index === incomeItems.length - 1}
-                    action={
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePlannedItem(item)}
-                        className="flex size-8 items-center justify-center rounded-full bg-[#16211b] transition hover:bg-[#1d2a20]"
-                        aria-label={`Delete ${item.title}`}
-                      >
-                        <Trash2 className="size-4 text-[#41d6b2]" />
-                      </button>
-                    }
-                  />
-                ))
-              ) : (
-                <div className="p-4">
-                  <FinanceEmptyState
-                    icon={Sparkles}
-                    title="No recurring income yet"
-                    description="Add salary or repeat payouts here so Home can project incoming cash more clearly."
-                  />
-                </div>
-              )}
-            </div>
-          </div>
+          {renderPlannedItemGroup(
+            'Recurring income',
+            incomeItems,
+            {
+              icon: Sparkles,
+              title: 'No recurring income yet',
+              description:
+                'Add salary or repeat payouts here so Home can project incoming cash more clearly.',
+            },
+            'bg-[#16211b] text-[#41d6b2]'
+          )}
         </div>
       </div>
 
