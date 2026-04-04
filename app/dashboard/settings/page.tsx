@@ -169,7 +169,7 @@ export default function SettingsPage() {
                   value={item.value}
                   href={item.href}
                   isLast={index === section.items.length - 1}
-                  comingSoon={item.comingSoon}
+                  comingSoon={'comingSoon' in item ? item.comingSoon : false}
                 />
               ))}
             </div>

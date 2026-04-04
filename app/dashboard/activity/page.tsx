@@ -145,6 +145,13 @@ export default function ActivityPage() {
     [accounts]
   )
   const categories = mode === 'INCOME' ? incomeCategoriesQuery.data ?? [] : expenseCategoriesQuery.data ?? []
+  const accountNameMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const account of accounts) {
+      map.set(account.id, account.name)
+    }
+    return map
+  }, [accounts])
   const cashFlowTransactions = useMemo(
     () => allTransactions.filter((transaction) => transaction.source !== 'TRANSFER'),
     [allTransactions]
@@ -576,6 +583,7 @@ export default function ActivityPage() {
                     <TransactionRow
                       key={transaction.id}
                       transaction={transaction}
+                      accountLabel={transaction.accountId ? accountNameMap.get(transaction.accountId) ?? null : null}
                       isLast={index === section.data.length - 1}
                       action={
                         <button

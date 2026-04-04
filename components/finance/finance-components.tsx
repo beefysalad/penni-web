@@ -117,10 +117,12 @@ export function AccountCard({ account, action }: { account: Account; action?: Re
 
 export function TransactionRow({
   transaction,
+  accountLabel,
   isLast,
   action,
 }: {
   transaction: Transaction
+  accountLabel?: string | null
   isLast?: boolean
   action?: ReactNode
 }) {
@@ -157,6 +159,14 @@ export function TransactionRow({
                 variant="subtle"
                 size="sm"
                 className="bg-[#18221d] text-[#93a19a]"
+              />
+            )}
+            {accountLabel && (
+              <Badge
+                label={accountLabel}
+                variant="subtle"
+                size="sm"
+                className="bg-[#131b17] text-[#b6c2bb] ring-1 ring-[#1f2c25]"
               />
             )}
           </div>
