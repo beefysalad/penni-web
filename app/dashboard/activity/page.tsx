@@ -241,7 +241,10 @@ export default function ActivityPage() {
   }
 
   const composerContent = (
-    <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
+    <form
+      onSubmit={handleSubmit(handleCreateTransaction)}
+      className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5"
+    >
       <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Quick capture</p>
@@ -416,7 +419,7 @@ export default function ActivityPage() {
       </div>
 
       <div className="mt-6 flex gap-3">
-        <Button onClick={handleSubmit(handleCreateTransaction)} disabled={createTransactionMutation.isPending || createTransferMutation.isPending}>
+        <Button type="submit" disabled={createTransactionMutation.isPending || createTransferMutation.isPending}>
           {createTransactionMutation.isPending || createTransferMutation.isPending
             ? 'Saving...'
             : mode === 'TRANSFER'
@@ -424,6 +427,7 @@ export default function ActivityPage() {
               : 'Save transaction'}
         </Button>
         <Button
+          type="button"
           variant="secondary"
           onClick={() => {
             reset(DEFAULT_FORM)
@@ -433,7 +437,7 @@ export default function ActivityPage() {
           Cancel
         </Button>
       </div>
-    </div>
+    </form>
   )
 
   return (

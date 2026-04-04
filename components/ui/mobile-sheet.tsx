@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -23,6 +23,22 @@ export function MobileSheet({
   children,
   className,
 }: MobileSheetProps) {
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const sync = () => setIsDesktop(mediaQuery.matches)
+
+    sync()
+    mediaQuery.addEventListener('change', sync)
+
+    return () => {
+      mediaQuery.removeEventListener('change', sync)
+    }
+  }, [])
+
+  if (isDesktop === null) return null
+  if (isDesktop) return null
   if (!open) return null
 
   return (

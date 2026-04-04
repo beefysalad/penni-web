@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -47,14 +47,15 @@ export default function CategoriesPage() {
     handleSubmit,
     reset,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<CategoryForm>({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: DEFAULT_FORM,
   })
 
-  const form = watch()
+  const type = useWatch({ control, name: 'type' })
+  const colorHex = useWatch({ control, name: 'colorHex' })
 
   const categories = useMemo(
     () => [...(expenseCategoriesQuery.data ?? []), ...(incomeCategoriesQuery.data ?? [])],
@@ -98,8 +99,11 @@ export default function CategoriesPage() {
   }
 
   const composerContent = (
-    <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
-      <div className="flex items-start justify-between gap-4">
+    <form
+      onSubmit={handleSubmit(handleCreateCategory)}
+      className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5"
+    >
+      <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Create category</p>
           <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">Add a new label</h2>
@@ -112,13 +116,13 @@ export default function CategoriesPage() {
         </div>
       </div>
 
-      <div className="mt-6 space-y-5">
+      <div className="mt-6 space-y-5 max-lg:mt-0">
         <div className="space-y-2">
           <Label htmlFor="category-name">Category name</Label>
           <Input
             id="category-name"
             {...register('name')}
-            placeholder={form.type === 'EXPENSE' ? 'e.g. Food, Bills, Shopping' : 'e.g. Salary, Freelance'}
+            placeholder={type === 'EXPENSE' ? 'e.g. Food, Bills, Shopping' : 'e.g. Salary, Freelance'}
           />
           <FormErrorMessage message={errors.name?.message} />
         </div>
@@ -127,7 +131,7 @@ export default function CategoriesPage() {
           <Label htmlFor="category-type">Type</Label>
           <select
             id="category-type"
-            value={form.type}
+            value={type}
             onChange={(event) =>
               setValue('type', event.target.value as CategoryType, {
                 shouldDirty: true,
@@ -160,7 +164,7 @@ export default function CategoriesPage() {
                   })
                 }
                 className={`size-10 rounded-full border-2 transition ${
-                  form.colorHex === color ? 'border-white/70 scale-105' : 'border-transparent'
+                  colorHex === color ? 'border-white/70 scale-105' : 'border-transparent'
                 }`}
                 style={{ backgroundColor: color }}
                 aria-label={`Use ${color} as category color`}
@@ -173,7 +177,7 @@ export default function CategoriesPage() {
 
       <div className="mt-6 flex gap-3">
         <Button
-          onClick={handleSubmit(handleCreateCategory)}
+          type="submit"
           className="flex-1"
           disabled={createCategoryMutation.isPending}
         >
@@ -181,6 +185,7 @@ export default function CategoriesPage() {
           {createCategoryMutation.isPending ? 'Saving...' : 'Add category'}
         </Button>
         <Button
+          type="button"
           variant="secondary"
           onClick={() => {
             reset(DEFAULT_FORM)
@@ -190,7 +195,7 @@ export default function CategoriesPage() {
           Cancel
         </Button>
       </div>
-    </div>
+    </form>
   )
 
   return (
@@ -205,99 +210,88 @@ export default function CategoriesPage() {
       </DashboardHeaderShell>
 
       <div className="flex flex-col gap-6 px-4 pb-28 pt-6 md:px-6 lg:px-8">
-        <div className="flex items-center justify-between rounded-[24px] border border-[#17211c] bg-[#111916] px-4 py-3">
-          <div>
-            <p className="text-[12px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">Finance setup</p>
-            <p className="mt-1 text-[14px] font-medium text-[#93a19a]">Create categories here and keep your reporting tidy.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden rounded-full bg-[#16211b] px-3 py-1 text-[11px] font-bold text-[#41d6b2] sm:inline-flex">Live</span>
-            <Button onClick={() => setShowComposer((current) => !current)}>
+        <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-[12px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">Finance setup</p>
+              <p className="mt-1 text-[14px] font-medium text-[#93a19a]">
+                Create categories here and keep your reporting tidy.
+              </p>
+            </div>
+            <Button onClick={() => setShowComposer((current) => !current)} className="lg:self-stretch">
               <Plus className="size-4" />
               {showComposer ? 'Close composer' : 'New category'}
             </Button>
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-          <div className="space-y-6">
-            {showComposer ? <div className="hidden xl:block">{composerContent}</div> : null}
+        {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}
 
-            <div className="rounded-[28px] border border-[#17211c] bg-[#101713] p-5">
-              <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Live create flow</p>
-              <h3 className="mt-2 text-[20px] font-bold tracking-tight text-[#f4f7f5]">Connected to backend</h3>
-              <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86]">
-                This page now uses the real categories endpoint with axios plus TanStack Query, matching the separation we already use on mobile.
-              </p>
+        <div className="space-y-6">
+          <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">Expense categories</h3>
+                <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">What you spend on day to day.</p>
+              </div>
+              <span className="rounded-full bg-[#241719] px-3 py-1 text-[11px] font-bold text-[#ff8a94]">
+                {expenseCategories.length} total
+              </span>
+            </div>
+
+            <div className="mt-5 overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
+              {isLoading ? (
+                <div className="space-y-3 p-4">
+                  <div className="h-14 rounded-[20px] bg-[#131b17] animate-pulse" />
+                  <div className="h-14 rounded-[20px] bg-[#131b17] animate-pulse" />
+                  <div className="h-14 rounded-[20px] bg-[#131b17] animate-pulse" />
+                </div>
+              ) : expenseCategories.length > 0 ? (
+                expenseCategories.map((category, index) => (
+                  <CategoryRow key={category.id} category={category} isLast={index === expenseCategories.length - 1} />
+                ))
+              ) : (
+                <div className="p-4">
+                  <FinanceEmptyState
+                    icon={Tags}
+                    title="No expense categories yet"
+                    description="Create your first expense label here so spending can stay organized."
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">Expense categories</h3>
-                  <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">What you spend on day to day.</p>
-                </div>
-                <span className="rounded-full bg-[#241719] px-3 py-1 text-[11px] font-bold text-[#ff8a94]">
-                  {expenseCategories.length} total
-                </span>
+          <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">Income categories</h3>
+                <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">Salary, freelance, side income, and more.</p>
               </div>
-
-              <div className="mt-5 overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
-                {isLoading ? (
-                  <div className="space-y-3 p-4">
-                    <div className="h-14 rounded-[20px] bg-[#131b17] animate-pulse" />
-                    <div className="h-14 rounded-[20px] bg-[#131b17] animate-pulse" />
-                    <div className="h-14 rounded-[20px] bg-[#131b17] animate-pulse" />
-                  </div>
-                ) : expenseCategories.length > 0 ? (
-                  expenseCategories.map((category, index) => (
-                    <CategoryRow key={category.id} category={category} isLast={index === expenseCategories.length - 1} />
-                  ))
-                ) : (
-                  <div className="p-4">
-                    <FinanceEmptyState
-                      icon={Tags}
-                      title="No expense categories yet"
-                      description="Create your first expense label here so spending can stay organized."
-                    />
-                  </div>
-                )}
-              </div>
+              <span className="rounded-full bg-[#16211b] px-3 py-1 text-[11px] font-bold text-[#41d6b2]">
+                {incomeCategories.length} total
+              </span>
             </div>
 
-            <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">Income categories</h3>
-                  <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">Salary, freelance, side income, and more.</p>
+            <div className="mt-5 overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
+              {isLoading ? (
+                <div className="space-y-3 p-4">
+                  <div className="h-14 rounded-[20px] bg-[#131b17] animate-pulse" />
+                  <div className="h-14 rounded-[20px] bg-[#131b17] animate-pulse" />
                 </div>
-                <span className="rounded-full bg-[#16211b] px-3 py-1 text-[11px] font-bold text-[#41d6b2]">
-                  {incomeCategories.length} total
-                </span>
-              </div>
-
-              <div className="mt-5 overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
-                {isLoading ? (
-                  <div className="space-y-3 p-4">
-                    <div className="h-14 rounded-[20px] bg-[#131b17] animate-pulse" />
-                    <div className="h-14 rounded-[20px] bg-[#131b17] animate-pulse" />
-                  </div>
-                ) : incomeCategories.length > 0 ? (
-                  incomeCategories.map((category, index) => (
-                    <CategoryRow key={category.id} category={category} isLast={index === incomeCategories.length - 1} />
-                  ))
-                ) : (
-                  <div className="p-4">
-                    <FinanceEmptyState
-                      icon={Tags}
-                      title="No income categories yet"
-                      description="Create a few labels so income sources stay readable across the app."
-                    />
-                  </div>
-                )}
-              </div>
+              ) : incomeCategories.length > 0 ? (
+                incomeCategories.map((category, index) => (
+                  <CategoryRow key={category.id} category={category} isLast={index === incomeCategories.length - 1} />
+                ))
+              ) : (
+                <div className="p-4">
+                  <FinanceEmptyState
+                    icon={Tags}
+                    title="No income categories yet"
+                    description="Create a few labels so income sources stay readable across the app."
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -306,8 +300,8 @@ export default function CategoriesPage() {
       <MobileSheet
         open={showComposer}
         onClose={() => setShowComposer(false)}
+        eyebrow="Categories"
         title="New category"
-        description="Create a category from mobile web without stretching the page."
       >
         {composerContent}
       </MobileSheet>

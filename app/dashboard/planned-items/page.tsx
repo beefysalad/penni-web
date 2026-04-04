@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -413,7 +413,10 @@ export default function PlannedItemsPage() {
   }
 
   const composerContent = (
-    <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
+    <form
+      onSubmit={handleSubmit(handleCreatePlannedItem)}
+      className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5"
+    >
       <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
           <p className="text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
@@ -483,10 +486,16 @@ export default function PlannedItemsPage() {
               ? 'First payout date'
               : 'First due date'}
           </Label>
-          <Input
-            id="planned-date"
-            type="date"
-            {...register('startDate')}
+          <Controller
+            name="startDate"
+            control={control}
+            render={({ field }) => (
+              <Input
+                id="planned-date"
+                type="date"
+                {...field}
+              />
+            )}
           />
           <FormErrorMessage message={errors.startDate?.message} />
         </div>
@@ -495,27 +504,40 @@ export default function PlannedItemsPage() {
           <Label htmlFor="planned-title">
             {type === 'INCOME' ? 'Income name' : 'Bill name'}
           </Label>
-          <Input
-            id="planned-title"
-            {...register('title')}
-            placeholder={
-              type === 'INCOME'
-                ? 'e.g. Payroll, Freelance retainer'
-                : 'e.g. Rent, Internet, Credit card'
-            }
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => (
+              <Input
+                id="planned-title"
+                {...field}
+                placeholder={
+                  type === 'INCOME'
+                    ? 'e.g. Payroll, Freelance retainer'
+                    : 'e.g. Rent, Internet, Credit card'
+                }
+              />
+            )}
           />
           <FormErrorMessage message={errors.title?.message} />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="planned-amount">Amount</Label>
-          <Input
-            id="planned-amount"
-            type="number"
-            min="0"
-            step="0.01"
-            {...register('amount')}
-            placeholder="0.00"
+          <Controller
+            name="amount"
+            control={control}
+            render={({ field }) => (
+              <Input
+                id="planned-amount"
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                {...field}
+                placeholder="0.00"
+              />
+            )}
           />
           <FormErrorMessage message={errors.amount?.message} />
         </div>
@@ -582,23 +604,35 @@ export default function PlannedItemsPage() {
           <>
             <div className="space-y-2">
               <Label htmlFor="semi-first">First day</Label>
-              <Input
-                id="semi-first"
-                type="number"
-                min="1"
-                max="31"
-                {...register('firstSemiMonthlyDay')}
+              <Controller
+                name="firstSemiMonthlyDay"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    id="semi-first"
+                    type="number"
+                    min="1"
+                    max="31"
+                    {...field}
+                  />
+                )}
               />
               <FormErrorMessage message={errors.firstSemiMonthlyDay?.message} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="semi-second">Second day</Label>
-              <Input
-                id="semi-second"
-                type="number"
-                min="1"
-                max="31"
-                {...register('secondSemiMonthlyDay')}
+              <Controller
+                name="secondSemiMonthlyDay"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    id="semi-second"
+                    type="number"
+                    min="1"
+                    max="31"
+                    {...field}
+                  />
+                )}
               />
               <FormErrorMessage message={errors.secondSemiMonthlyDay?.message} />
             </div>
@@ -625,20 +659,16 @@ export default function PlannedItemsPage() {
       </div>
 
       <div className="mt-6 flex gap-3">
-        <Button
-          onClick={handleSubmit(handleCreatePlannedItem)}
-          className="flex-1"
-          disabled={createPlannedItemMutation.isPending}
-        >
+        <Button type="submit" className="flex-1" disabled={createPlannedItemMutation.isPending}>
           {createPlannedItemMutation.isPending
             ? 'Saving...'
             : 'Add planned item'}
         </Button>
-        <Button variant="secondary" onClick={resetComposer}>
+        <Button type="button" variant="secondary" onClick={resetComposer}>
           Cancel
         </Button>
       </div>
-    </div>
+    </form>
   )
 
   return (

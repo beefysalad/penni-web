@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
 import FormErrorMessage from '@/components/ui/form-error-message'
+import { FinanceEmptyState } from '@/components/finance/management-components'
 import { useBudgetsQuery, useCreateBudgetMutation, useDeleteBudgetMutation, useUpdateBudgetMutation } from '@/hooks/finance/use-budgets-query'
 import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { useTransactionsQuery } from '@/hooks/finance/use-transactions-query'
@@ -103,14 +104,14 @@ export default function BudgetsPage() {
     handleSubmit,
     reset,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<BudgetForm>({
     resolver: zodResolver(budgetFormSchema),
     defaultValues: DEFAULT_FORM,
   })
 
-  const form = watch()
+  const categoryId = useWatch({ control, name: 'categoryId' })
 
   const budgets = budgetsQuery.data ?? []
   const categories = categoriesQuery.data ?? []
@@ -165,8 +166,11 @@ export default function BudgetsPage() {
   }
 
   const composerContent = (
-    <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
-      <div className="flex items-start justify-between gap-4">
+    <form
+      onSubmit={handleSubmit(handleBudgetSubmit)}
+      className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5"
+    >
+      <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
             {editingBudgetId ? 'Edit budget' : 'Create budget'}
@@ -174,13 +178,16 @@ export default function BudgetsPage() {
           <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
             {editingBudgetId ? 'Adjust this limit' : 'Set a spending guardrail'}
           </h2>
+          <p className="mt-2 text-[14px] leading-relaxed font-medium text-[#7f8c86]">
+            Budgets track your category spending against a limit over a period you define.
+          </p>
         </div>
         <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
           <Goal className="size-5 text-[#ffc857]" />
         </div>
       </div>
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-6 space-y-4 max-lg:mt-0">
         <div className="space-y-2">
           <Label htmlFor="budget-name">Budget name</Label>
           <Input id="budget-name" {...register('name')} placeholder="e.g. Food, Shopping, Family" />
@@ -190,7 +197,7 @@ export default function BudgetsPage() {
           <Label htmlFor="budget-category">Expense category</Label>
           <select
             id="budget-category"
-            value={form.categoryId}
+            value={categoryId}
             onChange={(e) =>
               setValue('categoryId', e.target.value, {
                 shouldDirty: true,
@@ -214,7 +221,7 @@ export default function BudgetsPage() {
             <FormErrorMessage message={errors.amount?.message} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="budget-alert">Alert threshold</Label>
+            <Label htmlFor="budget-alert">Alert threshold (%)</Label>
             <Input id="budget-alert" type="number" min="1" max="100" {...register('alertThreshold')} placeholder="80" />
             <FormErrorMessage message={errors.alertThreshold?.message} />
           </div>
@@ -236,16 +243,16 @@ export default function BudgetsPage() {
 
       <div className="mt-6 flex gap-3">
         <Button
-          onClick={handleSubmit(handleBudgetSubmit)}
+          type="submit"
           className="flex-1"
           disabled={createBudgetMutation.isPending || updateBudgetMutation.isPending}
         >
           <Plus className="size-4" />
           {editingBudgetId ? 'Save budget' : 'Create budget'}
         </Button>
-        <Button variant="secondary" onClick={resetForm}>Cancel</Button>
+        <Button type="button" variant="secondary" onClick={resetForm}>Cancel</Button>
       </div>
-    </div>
+    </form>
   )
 
   return (
@@ -277,28 +284,28 @@ export default function BudgetsPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-          {showComposer ? <div className="hidden xl:block">{composerContent}</div> : <div className="hidden xl:block" />}
+        {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}
 
-          <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">Active budgets</h3>
-                <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">Live against the backend with current transaction spend.</p>
-              </div>
-              <span className="rounded-full bg-[#2a2518] px-3 py-1 text-[11px] font-bold text-[#ffc857]">
-                {budgets.length} budgets
-              </span>
+        <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">Active budgets</h3>
+              <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">Live against the backend with current transaction spend.</p>
             </div>
+            <span className="rounded-full bg-[#2a2518] px-3 py-1 text-[11px] font-bold text-[#ffc857]">
+              {budgets.length} budgets
+            </span>
+          </div>
 
-            <div className="mt-5 space-y-3">
-              {budgetsQuery.isLoading ? (
-                <>
-                  <div className="h-24 rounded-[24px] bg-[#131b17] animate-pulse" />
-                  <div className="h-24 rounded-[24px] bg-[#131b17] animate-pulse" />
-                </>
-              ) : budgets.length > 0 ? (
-                budgets.map((budget) => {
+          <div className="mt-5 overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
+            {budgetsQuery.isLoading ? (
+              <div className="space-y-3 p-4">
+                <div className="h-24 rounded-[20px] bg-[#131b17] animate-pulse" />
+                <div className="h-24 rounded-[20px] bg-[#131b17] animate-pulse" />
+              </div>
+            ) : budgets.length > 0 ? (
+              <div className="divide-y divide-[#17211c]/60">
+                {budgets.map((budget) => {
                   const spent = getSpentForBudget(budget, transactions)
                   const limit = Number(budget.amount)
                   const remaining = limit - spent
@@ -307,57 +314,65 @@ export default function BudgetsPage() {
                   const barColor = isOver ? '#ff8a94' : pct > 80 ? '#ffc857' : '#8bff62'
 
                   return (
-                    <div key={budget.id} className="rounded-[24px] bg-[#131b17] p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[16px] font-bold text-[#f4f7f5]">{budget.name || categoryMap.get(budget.categoryId ?? '') || 'Unnamed budget'}</p>
-                          <p className="mt-1 text-[12px] font-medium text-[#7f8c86]">
-                            {formatCurrency(spent, budget.currency)} of {formatCurrency(limit, budget.currency)} • {formatCompactDate(budget.periodStart)} to {formatCompactDate(budget.periodEnd)}
-                          </p>
+                    <div key={budget.id} className="p-4">
+                      <div className="overflow-hidden rounded-[20px] border border-[#17211c] bg-[#0f1512] p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[16px] font-bold text-[#f4f7f5]">
+                              {budget.name || categoryMap.get(budget.categoryId ?? '') || 'Unnamed budget'}
+                            </p>
+                            <p className="mt-1 text-[12px] font-medium text-[#7f8c86]">
+                              {formatCurrency(spent, budget.currency)} of {formatCurrency(limit, budget.currency)} · {formatCompactDate(budget.periodStart)} to {formatCompactDate(budget.periodEnd)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingBudgetId(budget.id)
+                                reset(mapBudgetToForm(budget))
+                                setShowComposer(true)
+                              }}
+                              className="flex size-9 items-center justify-center rounded-full bg-[#18221d] transition hover:bg-[#213129]"
+                              aria-label={`Edit ${budget.name || 'budget'}`}
+                            >
+                              <Pencil className="size-4 text-[#8bff62]" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                deleteBudgetMutation.mutate(budget.id, {
+                                  onSuccess: () => toast.success(`${budget.name || 'Budget'} deleted.`),
+                                  onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not delete budget.'),
+                                })
+                              }
+                              className="flex size-9 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
+                              aria-label={`Delete ${budget.name || 'budget'}`}
+                            >
+                              <Trash2 className="size-4 text-[#ff8a94]" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingBudgetId(budget.id)
-                              reset(mapBudgetToForm(budget))
-                              setShowComposer(true)
-                            }}
-                            className="flex size-9 items-center justify-center rounded-full bg-[#18221d] transition hover:bg-[#213129]"
-                          >
-                            <Pencil className="size-4 text-[#8bff62]" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              deleteBudgetMutation.mutate(budget.id, {
-                                onSuccess: () => toast.success(`${budget.name || 'Budget'} deleted.`),
-                                onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not delete budget.'),
-                              })
-                            }
-                            className="flex size-9 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
-                          >
-                            <Trash2 className="size-4 text-[#ff8a94]" />
-                          </button>
+                        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#1a2c1f]">
+                          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: barColor }} />
                         </div>
+                        <p className="mt-3 text-[13px] font-semibold" style={{ color: remaining < 0 ? '#ff8a94' : '#dce2de' }}>
+                          {remaining < 0 ? 'Over ' : 'Left '}{formatCurrency(Math.abs(remaining), budget.currency)}
+                        </p>
                       </div>
-                      <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#1a2c1f]">
-                        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: barColor }} />
-                      </div>
-                      <p className="mt-3 text-[13px] font-semibold text={remaining < 0 ? '#ff8a94' : '#dce2de'}">
-                        {remaining < 0 ? 'Over ' : 'Left '}{formatCurrency(Math.abs(remaining), budget.currency)}
-                      </p>
                     </div>
                   )
-                })
-              ) : (
-                <div className="rounded-[24px] bg-[#131b17] px-5 py-8 text-center">
-                  <p className="text-[14px] leading-relaxed font-medium text-[#7f8c86]">
-                    Set a budget to start tracking category drift and remaining room.
-                  </p>
-                </div>
-              )}
-            </div>
+                })}
+              </div>
+            ) : (
+              <div className="p-4">
+                <FinanceEmptyState
+                  icon={Goal}
+                  title="No budgets yet"
+                  description="Set a budget to start tracking category drift and remaining room."
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -365,8 +380,8 @@ export default function BudgetsPage() {
       <MobileSheet
         open={showComposer}
         onClose={resetForm}
+        eyebrow="Budget"
         title={editingBudgetId ? 'Edit budget' : 'New budget'}
-        description="Create or adjust a budget from mobile web without opening a long inline panel."
       >
         {composerContent}
       </MobileSheet>

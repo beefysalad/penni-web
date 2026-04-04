@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
@@ -78,19 +78,21 @@ export default function AccountsPage() {
     handleSubmit,
     reset,
     setValue,
-    watch,
     trigger,
+    control,
     formState: { errors },
   } = useForm<AccountForm>({
     defaultValues: DEFAULT_FORM,
   })
 
-  const form = watch()
+  const type = useWatch({ control, name: 'type' })
+  const currency = useWatch({ control, name: 'currency' })
+  const creditLimit = useWatch({ control, name: 'creditLimit' })
 
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
   const totalBalance = useMemo(() => getNetWorth(accounts), [accounts])
   const typeBreakdown = useMemo(() => getTypeBreakdown(accounts), [accounts])
-  const isCreditCard = form.type === 'CREDIT_CARD'
+  const isCreditCard = type === 'CREDIT_CARD'
 
   const filteredAccounts = useMemo(() => {
     if (activeFilter === 'All') return accounts
@@ -163,7 +165,10 @@ export default function AccountsPage() {
   }
 
   const composerContent = (
-    <div className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5">
+    <form
+      onSubmit={handleSubmit(handleAccountSubmit)}
+      className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5"
+    >
       <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
@@ -186,7 +191,7 @@ export default function AccountsPage() {
           <Label>Type</Label>
           <div className="flex flex-wrap gap-2">
             {ACCOUNT_TYPE_OPTIONS.map((option) => {
-              const selected = form.type === option.value
+              const selected = type === option.value
               return (
                 <button
                   key={option.value}
@@ -230,7 +235,7 @@ export default function AccountsPage() {
           </Label>
           <select
             id="account-type"
-            value={form.type}
+            value={type}
             onChange={async (e) => {
               setValue('type', e.target.value as AccountType, {
                 shouldDirty: true,
@@ -252,7 +257,7 @@ export default function AccountsPage() {
           <Label htmlFor="account-currency">Currency</Label>
           <select
             id="account-currency"
-            value={form.currency}
+            value={currency}
             onChange={(e) =>
               setValue('currency', e.target.value, {
                 shouldDirty: true,
@@ -287,7 +292,7 @@ export default function AccountsPage() {
                 type="number"
                 {...register('creditLimit', {
                   validate: (value) => {
-                    if (watch('type') !== 'CREDIT_CARD') return true
+                    if (type !== 'CREDIT_CARD') return true
                     if (!value.trim()) return 'Credit limit is required for credit cards.'
 
                     const parsed = Number(value)
@@ -307,11 +312,11 @@ export default function AccountsPage() {
                 type="number"
                 {...register('availableCredit', {
                   validate: (value) => {
-                    if (watch('type') !== 'CREDIT_CARD') return true
+                    if (type !== 'CREDIT_CARD') return true
                     if (!value.trim()) return 'Available credit is required for credit cards.'
 
                     const parsed = Number(value)
-                    const limit = Number(watch('creditLimit'))
+                    const limit = Number(creditLimit)
 
                     if (!Number.isFinite(parsed) || parsed < 0) {
                       return 'Enter a valid available credit amount.'
@@ -337,7 +342,7 @@ export default function AccountsPage() {
                 max="31"
                 {...register('dueDayOfMonth', {
                   validate: (value) => {
-                    if (watch('type') !== 'CREDIT_CARD') return true
+                    if (type !== 'CREDIT_CARD') return true
                     if (!value.trim()) return 'Due day is required for credit cards.'
 
                     const parsed = Number(value)
@@ -358,12 +363,10 @@ export default function AccountsPage() {
               id="account-balance"
               type="number"
               {...register('balance', {
-                validate: (value) => {
-                  if (watch('type') === 'CREDIT_CARD') return true
-                  return Number.isFinite(Number(value || 0))
+                validate: (value) =>
+                  Number.isFinite(Number(value || 0))
                     ? true
-                    : 'Enter a valid starting balance.'
-                },
+                    : 'Enter a valid starting balance.',
               })}
               placeholder="25000.00"
             />
@@ -374,17 +377,17 @@ export default function AccountsPage() {
 
       <div className="mt-6 flex gap-3">
         <Button
-          onClick={handleSubmit(handleAccountSubmit)}
+          type="submit"
           className="flex-1"
           disabled={createAccountMutation.isPending || updateAccountMutation.isPending}
         >
           {editingAccountId ? 'Save changes' : 'Add account'}
         </Button>
-        <Button variant="secondary" onClick={resetForm}>
+        <Button type="button" variant="secondary" onClick={resetForm}>
           Cancel
         </Button>
       </div>
-    </div>
+    </form>
   )
 
   return (
