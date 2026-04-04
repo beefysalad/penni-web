@@ -135,6 +135,18 @@ function getStatusLabel(status: PlannedItemWithRecurringState['status']) {
   return 'Upcoming'
 }
 
+function getCompletionActionLabel(type: CategoryType) {
+  return type === 'INCOME' ? 'Mark received' : 'Mark paid'
+}
+
+function getCompletionToastLabel(type: CategoryType) {
+  return type === 'INCOME' ? 'marked as received' : 'marked as paid'
+}
+
+function getCompletedSectionLabel(type: CategoryType) {
+  return type === 'INCOME' ? 'Received' : 'Paid'
+}
+
 function getStatusTone(status: PlannedItemWithRecurringState['status']) {
   if (status === 'OVERDUE') return 'danger' as const
   if (status === 'COMPLETE') return 'success' as const
@@ -142,12 +154,17 @@ function getStatusTone(status: PlannedItemWithRecurringState['status']) {
 }
 
 function getHelperText(plannedItem: PlannedItemWithRecurringState) {
+  const actionLabel =
+    plannedItem.item.type === 'INCOME' ? 'Mark it received' : 'Mark it paid'
+
   if (plannedItem.status === 'COMPLETE' && plannedItem.matchedTransaction) {
-    return `Matched ${formatShortDate(plannedItem.matchedTransaction.transactionAt)}.`
+    return plannedItem.item.type === 'INCOME'
+      ? `Matched deposit on ${formatShortDate(plannedItem.matchedTransaction.transactionAt)}.`
+      : `Matched payment on ${formatShortDate(plannedItem.matchedTransaction.transactionAt)}.`
   }
 
   if (plannedItem.status === 'DUE') {
-    return 'Expected today. Mark it paid once the transaction lands.'
+    return `Expected today. ${actionLabel} once the transaction lands.`
   }
 
   if (plannedItem.status === 'OVERDUE') {
@@ -279,7 +296,7 @@ export default function PlannedItemsPage() {
       },
       {
         onSuccess: () => {
-          toast.success(`${item.item.title} marked as paid.`)
+          toast.success(`${item.item.title} ${getCompletionToastLabel(item.item.type)}.`)
         },
         onError: (error) => {
           toast.error(
@@ -302,6 +319,7 @@ export default function PlannedItemsPage() {
     },
     accentClassName: string
   ) => {
+    const itemType = items[0]?.item.type ?? 'EXPENSE'
     const overdueItems = items.filter((item) => item.status === 'OVERDUE')
     const dueItems = items.filter((item) => item.status === 'DUE')
     const upcomingItems = items.filter((item) => item.status === 'UPCOMING')
@@ -311,7 +329,7 @@ export default function PlannedItemsPage() {
       { title: 'Overdue', items: overdueItems },
       { title: 'Due today', items: dueItems },
       { title: 'Upcoming', items: upcomingItems },
-      { title: 'Completed', items: completedItems },
+      { title: getCompletedSectionLabel(itemType), items: completedItems },
     ].filter((section) => section.items.length > 0)
 
     return (
@@ -367,7 +385,7 @@ export default function PlannedItemsPage() {
                                 disabled={completePlannedItemMutation.isPending}
                                 className="h-8 rounded-full px-3"
                               >
-                                Mark paid
+                                {getCompletionActionLabel(entry.item.type)}
                               </Button>
                             ) : null}
                             <button
