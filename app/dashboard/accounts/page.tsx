@@ -225,7 +225,9 @@ export default function AccountsPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="account-type">Type</Label>
+          <Label htmlFor="account-type" className="hidden lg:block">
+            Type
+          </Label>
           <select
             id="account-type"
             value={form.type}
