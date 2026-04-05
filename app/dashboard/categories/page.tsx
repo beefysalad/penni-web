@@ -81,7 +81,7 @@ export default function CategoriesPage() {
     createCategoryMutation.mutate(
       {
         name,
-        slug: slug || `category-${Date.now()}`,
+        slug: slug || `category-${crypto.randomUUID()}`,
         type: values.type,
         colorHex: values.colorHex,
       },

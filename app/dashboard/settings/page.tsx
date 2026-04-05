@@ -108,7 +108,7 @@ export default function SettingsPage() {
     {
       title: 'Support',
       items: [
-        { iconBg: 'bg-[#1e1c2e]', iconColor: 'text-[#a084ff]', icon: MessageSquare, label: 'Send Feedback', href: '#', comingSoon: true },
+        { iconBg: 'bg-[#1e1c2e]', iconColor: 'text-[#a084ff]', icon: MessageSquare, label: 'Send Feedback', value: 'Report a bug, suggest a feature', href: '/dashboard/feedback' },
       ]
     }
   ]
