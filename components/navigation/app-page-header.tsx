@@ -25,8 +25,8 @@ export function AppPageHeader({
   const { user } = useUser()
 
   return (
-    <div className="flex flex-row items-start justify-between gap-4">
-      <div className="flex-1">
+    <div className="flex min-w-0 max-w-full flex-row items-start justify-between gap-4 overflow-hidden">
+      <div className="min-w-0 flex-1">
         {eyebrow && (
           <p
             className={cn(
@@ -39,7 +39,7 @@ export function AppPageHeader({
         )}
         <h1
           className={cn(
-            'mt-2 text-[28px] font-bold leading-[1.2] tracking-tight',
+            'mt-2 break-words text-[28px] font-bold leading-[1.2] tracking-tight',
             inverted ? 'text-[#f4f7f5]' : 'text-[#172033]'
           )}
         >
@@ -48,7 +48,7 @@ export function AppPageHeader({
         {subtitle && (
           <p
             className={cn(
-              'mt-2 text-[14.5px] leading-relaxed font-medium',
+              'mt-2 break-words text-[14.5px] leading-relaxed font-medium',
               inverted ? 'text-[#9ca8a1]' : 'text-[#7b8499]'
             )}
           >

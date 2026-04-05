@@ -12,17 +12,17 @@ export function InternalDashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname()
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#060b08] text-[#f4f7f5]">
-      <div className="flex min-h-screen flex-1">
+    <div className="flex min-h-screen overflow-x-hidden flex-col bg-[#060b08] text-[#f4f7f5]">
+      <div className="flex min-h-screen min-w-0 flex-1 overflow-x-hidden">
         <AppTabBar />
 
-        <main className="min-w-0 flex-1 overflow-y-auto pb-28 lg:ml-[248px] lg:pb-10">
+        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto pb-28 lg:ml-[248px] lg:pb-10">
           <motion.div
             key={pathname}
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="mx-auto flex w-full max-w-[1360px] flex-col"
+            className="mx-auto flex w-full min-w-0 max-w-[1360px] flex-col"
           >
             {children}
           </motion.div>

@@ -13,10 +13,10 @@ export function DashboardHeaderShell({
   innerClassName?: string
 }) {
   return (
-    <div className={cn('px-4 pt-4 md:px-6 md:pt-6 lg:px-8', className)}>
+    <div className={cn('max-w-full overflow-x-hidden px-4 pt-4 md:px-6 md:pt-6 lg:px-8', className)}>
       <div
         className={cn(
-          'rounded-[32px] border border-[#17211c] bg-[#0b120e] px-6 pb-6 pt-6 md:px-8 md:pb-8',
+          'max-w-full overflow-hidden rounded-[32px] border border-[#17211c] bg-[#0b120e] px-6 pb-6 pt-6 md:px-8 md:pb-8',
           innerClassName
         )}
       >
