@@ -60,14 +60,14 @@ export function HomeBalanceHero({
 
   return (
     <div className="rounded-[30px] border border-[#1b2a21] bg-[#111916] p-5 shadow-xl shadow-black/20">
-      <div className="flex flex-row items-start justify-between gap-4">
+      <div className="flex flex-row items-start justify-between gap-3 sm:gap-4">
         <div className="flex-1">
           <p className="text-[13px] font-bold tracking-wider text-[#73827a] uppercase">
             Left after recurring
           </p>
           <h2
             className={cn(
-              'mt-2 text-[38px] leading-none font-bold tracking-tight',
+              'mt-2 max-w-full break-words text-[30px] leading-[0.95] font-bold tracking-tight sm:text-[38px]',
               isNegative ? 'text-[#ff8a94]' : 'text-[#f4f7f5]'
             )}
           >
@@ -86,8 +86,8 @@ export function HomeBalanceHero({
         </div>
       </div>
 
-      <div className="mt-6 flex flex-row gap-3">
-        <div className="flex-1 rounded-[24px] bg-[#18221d] p-4 transition-colors hover:bg-[#1c2822]">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="min-w-0 rounded-[24px] bg-[#18221d] p-4 transition-colors hover:bg-[#1c2822]">
           <div className="flex size-10 items-center justify-center rounded-full bg-[#1f3325]">
             <Calendar className="size-5 text-[#8bff62]" />
           </div>
@@ -102,7 +102,7 @@ export function HomeBalanceHero({
           </p>
         </div>
 
-        <div className="flex-1 rounded-[24px] bg-[#141b1f] p-4 transition-colors hover:bg-[#192126]">
+        <div className="min-w-0 rounded-[24px] bg-[#141b1f] p-4 transition-colors hover:bg-[#192126]">
           <div className="flex size-10 items-center justify-center rounded-full bg-[#1c2830]">
             <TrendingUp className="size-5 text-[#41d6b2]" />
           </div>

@@ -144,39 +144,40 @@ export function TransactionRow({
 
   return (
     <div className={cn('px-4 py-3.5 transition-colors hover:bg-white/5', !isLast && 'border-b border-[#17211c]/60')}>
-      <div className="flex flex-row items-center gap-3">
+      <div className="flex items-start gap-3">
         <div className={cn('flex size-11 items-center justify-center rounded-[14px]', iconBg)}>
           <Icon className={cn('size-[17px]', iconColor)} />
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="truncate text-[16px] font-bold text-[#f4f7f5]">{transaction.title}</p>
-          <div className="mt-1 flex flex-row items-center gap-2">
-            <span className="text-[13px] font-medium text-[#6d786f]">{formatShortDate(transaction.transactionAt)}</span>
-            {sourceLabel && (
-              <Badge
-                label={sourceLabel}
-                variant="subtle"
-                size="sm"
-                className="bg-[#18221d] text-[#93a19a]"
-              />
-            )}
-            {accountLabel && (
-              <Badge
-                label={accountLabel}
-                variant="subtle"
-                size="sm"
-                className="bg-[#131b17] text-[#b6c2bb] ring-1 ring-[#1f2c25]"
-              />
-            )}
-          </div>
-        </div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[16px] font-bold text-[#f4f7f5]">{transaction.title}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="text-[13px] font-medium text-[#6d786f]">{formatShortDate(transaction.transactionAt)}</span>
+                {sourceLabel && (
+                  <Badge
+                    label={sourceLabel}
+                    variant="subtle"
+                    size="sm"
+                    className="bg-[#18221d] text-[#93a19a] max-sm:px-2 max-sm:py-1 max-sm:text-[10px]"
+                  />
+                )}
+                {accountLabel && (
+                  <span className="inline-flex max-w-[128px] truncate rounded-full bg-[#131b17] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[1.2px] text-[#b6c2bb] ring-1 ring-[#1f2c25] sm:max-w-[180px] sm:px-3 sm:text-[11px] sm:tracking-[1.4px]">
+                    {accountLabel}
+                  </span>
+                )}
+              </div>
+            </div>
 
-        <div className="flex items-center gap-3">
-          <p className={cn('text-[17px] font-bold', amountColor)}>
-            {sign}{formatCurrency(Number(transaction.amount), transaction.currency)}
-          </p>
-          {action}
+            <div className="flex shrink-0 items-start gap-2">
+              <p className={cn('pt-0.5 text-right text-[15px] font-bold leading-tight sm:text-[17px]', amountColor)}>
+                {sign}{formatCurrency(Number(transaction.amount), transaction.currency)}
+              </p>
+              {action}
+            </div>
+          </div>
         </div>
       </div>
 
