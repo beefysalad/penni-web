@@ -127,7 +127,6 @@ export default function ActivityPage() {
     setValue,
     setError,
     clearErrors,
-    trigger,
     control,
     formState: { errors },
   } = useForm<TransactionForm>({
@@ -214,9 +213,36 @@ export default function ActivityPage() {
       return
     }
 
+    if (
+      values.mode === 'EXPENSE' &&
+      selectedAccount &&
+      selectedAccount.type !== 'CREDIT_CARD' &&
+      amount > Number(selectedAccount.balance ?? 0)
+    ) {
+      setError('amount', {
+        type: 'manual',
+        message: "Amount exceeds the account's available balance.",
+      })
+      return
+    }
+
     clearErrors('amount')
 
     if (values.mode === 'TRANSFER') {
+      const fromAccount = accounts.find((account) => account.id === values.accountId) ?? null
+
+      if (
+        fromAccount &&
+        fromAccount.type !== 'CREDIT_CARD' &&
+        amount > Number(fromAccount.balance ?? 0)
+      ) {
+        setError('amount', {
+          type: 'manual',
+          message: "Transfer amount exceeds the account's available balance.",
+        })
+        return
+      }
+
       createTransferMutation.mutate(
         {
           fromAccountId: values.accountId,
@@ -294,10 +320,11 @@ export default function ActivityPage() {
                       item === 'TRANSFER' && !transferSourceAccounts.some((a) => a.id === accountId)
                         ? ''
                         : accountId
-                    setValue('mode', item, { shouldDirty: true, shouldTouch: true })
+                    setValue('mode', item, { shouldDirty: true })
                     setValue('categoryId', '', { shouldDirty: true })
                     setValue('accountId', nextAccountId, { shouldDirty: true })
-                    await trigger(['mode', 'title', 'amount', 'accountId', 'toAccountId'])
+                    setValue('toAccountId', '', { shouldDirty: true })
+                    clearErrors(['title', 'amount', 'accountId', 'toAccountId', 'categoryId'])
                   }}
                   className={cn(
                     'flex-1 rounded-[16px] px-4 py-3 text-[15px] font-semibold transition',
@@ -322,10 +349,11 @@ export default function ActivityPage() {
                 newMode === 'TRANSFER' && !transferSourceAccounts.some((a) => a.id === accountId)
                   ? ''
                   : accountId
-              setValue('mode', newMode, { shouldDirty: true, shouldTouch: true })
+              setValue('mode', newMode, { shouldDirty: true })
               setValue('categoryId', '', { shouldDirty: true })
               setValue('accountId', nextAccountId, { shouldDirty: true })
-              await trigger(['mode', 'title', 'amount', 'accountId', 'toAccountId'])
+              setValue('toAccountId', '', { shouldDirty: true })
+              clearErrors(['title', 'amount', 'accountId', 'toAccountId', 'categoryId'])
             }}
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >

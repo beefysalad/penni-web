@@ -115,6 +115,15 @@ export default function AccountDetailPage() {
     [allTransactions, accountId]
   )
 
+  const signedTransactionDelta = useMemo(
+    () =>
+      accountTransactions.reduce((sum, transaction) => {
+        const amount = Number(transaction.amount)
+        return transaction.type === 'INCOME' ? sum + amount : sum - amount
+      }, 0),
+    [accountTransactions]
+  )
+
   const sections = useMemo(
     () => groupTransactionsIntoSections(accountTransactions),
     [accountTransactions]
@@ -125,36 +134,38 @@ export default function AccountDetailPage() {
     [plannedItems, allTransactions]
   )
 
-  const monthlyTransactions = useMemo(() => {
-    const now = new Date()
-    return accountTransactions.filter((transaction) => {
-      const date = new Date(transaction.transactionAt)
-      return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
-    })
-  }, [accountTransactions])
+  const openingBalance = useMemo(
+    () => (account ? Number(account.balance) - signedTransactionDelta : 0),
+    [account, signedTransactionDelta]
+  )
+
+  const cashFlowTransactions = useMemo(
+    () => accountTransactions.filter((transaction) => transaction.source !== 'TRANSFER'),
+    [accountTransactions]
+  )
 
   const moneyIn = useMemo(
     () =>
-      monthlyTransactions
+      cashFlowTransactions
         .filter((transaction) => transaction.type === 'INCOME' && transaction.source !== 'TRANSFER')
-        .reduce((sum, transaction) => sum + Number(transaction.amount), 0),
-    [monthlyTransactions]
+        .reduce((sum, transaction) => sum + Number(transaction.amount), Math.max(openingBalance, 0)),
+    [cashFlowTransactions, openingBalance]
   )
 
   const moneyOut = useMemo(
     () =>
-      monthlyTransactions
+      cashFlowTransactions
         .filter((transaction) => transaction.type === 'EXPENSE' && transaction.source !== 'TRANSFER')
-        .reduce((sum, transaction) => sum + Number(transaction.amount), 0),
-    [monthlyTransactions]
+        .reduce((sum, transaction) => sum + Number(transaction.amount), Math.abs(Math.min(openingBalance, 0))),
+    [cashFlowTransactions, openingBalance]
   )
 
   const transferMoves = useMemo(
     () =>
-      monthlyTransactions
+      accountTransactions
         .filter((transaction) => transaction.source === 'TRANSFER')
         .reduce((sum, transaction) => sum + Math.abs(Number(transaction.amount)), 0),
-    [monthlyTransactions]
+    [accountTransactions]
   )
 
   const lastActivity = accountTransactions[0] ? formatShortDate(accountTransactions[0].transactionAt) : 'No activity yet'
@@ -198,14 +209,14 @@ export default function AccountDetailPage() {
             <StatsTile
               label="Money in"
               value={formatCurrency(moneyIn, account.currency)}
-              hint="Income landed in this account this month."
+              hint="Includes opening balance and posted income."
               tone="positive"
               icon={ArrowUpRight}
             />
             <StatsTile
               label="Money out"
               value={formatCurrency(moneyOut, account.currency)}
-              hint="Expenses or withdrawals from this account this month."
+              hint="Expenses posted from this account so far."
               tone="negative"
               icon={ArrowDownLeft}
             />
