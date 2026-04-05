@@ -125,6 +125,8 @@ export default function ActivityPage() {
     handleSubmit,
     reset,
     setValue,
+    setError,
+    clearErrors,
     trigger,
     control,
     formState: { errors },
@@ -198,6 +200,21 @@ export default function ActivityPage() {
   const handleCreateTransaction = (values: TransactionForm) => {
     const title = values.title.trim()
     const amount = Number(values.amount)
+    const selectedAccount = accounts.find((account) => account.id === values.accountId) ?? null
+
+    if (
+      values.mode === 'EXPENSE' &&
+      selectedAccount?.type === 'CREDIT_CARD' &&
+      amount > Number(selectedAccount.availableCredit ?? 0)
+    ) {
+      setError('amount', {
+        type: 'manual',
+        message: "Charge exceeds the card's available credit.",
+      })
+      return
+    }
+
+    clearErrors('amount')
 
     if (values.mode === 'TRANSFER') {
       createTransferMutation.mutate(

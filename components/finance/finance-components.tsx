@@ -17,18 +17,43 @@ import type { Account, Transaction } from '@/lib/finance.types'
 
 // --- Account Card ---
 
-export function AccountCard({ account, action }: { account: Account; action?: ReactNode }) {
+export function AccountCard({
+  account,
+  action,
+  onClick,
+}: {
+  account: Account
+  action?: ReactNode
+  onClick?: () => void
+}) {
   const meta = ACCOUNT_TYPE_META[account.type]
   const TypeIcon = meta.icon
   const isCreditCard = account.type === 'CREDIT_CARD'
   const availableCredit = account.availableCredit ? Number(account.availableCredit) : null
   const creditLimit = account.creditLimit ? Number(account.creditLimit) : null
   const dueDayLabel = formatDueDayOfMonth(account.dueDayOfMonth)
+  const usedCredit =
+    creditLimit !== null && availableCredit !== null
+      ? Math.max(0, creditLimit - availableCredit)
+      : Number(account.balance)
 
   return (
     <motion.div 
       whileHover={{ scale: 1.01 }}
-      className="rounded-[28px] border border-[#1b2a21]/60 bg-[#111916] p-5 transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (!onClick) return
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick()
+        }
+      }}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      className={cn(
+        'rounded-[28px] border border-[#1b2a21]/60 bg-[#111916] p-5 transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]',
+        onClick ? 'cursor-pointer' : ''
+      )}
     >
       <div className="flex flex-row items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-row items-center gap-4">
@@ -59,11 +84,22 @@ export function AccountCard({ account, action }: { account: Account; action?: Re
             <p
               className={cn(
                 'max-w-full break-words text-right text-[22px] leading-tight font-bold tracking-tight sm:text-xl',
-                Number(account.balance) < 0 ? 'text-[#ff8a94]' : 'text-[#f4f7f5]'
+                isCreditCard
+                  ? 'text-[#f4f7f5]'
+                  : Number(account.balance) < 0
+                    ? 'text-[#ff8a94]'
+                    : 'text-[#f4f7f5]'
               )}
             >
-              {formatCurrency(Number(account.balance), account.currency)}
+              {isCreditCard && availableCredit !== null
+                ? formatCurrency(availableCredit, account.currency)
+                : formatCurrency(Number(account.balance), account.currency)}
             </p>
+            {isCreditCard ? (
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-[#5c6e64]">
+                Available credit
+              </p>
+            ) : null}
             {account.institutionName && (
               <p className="mt-1 max-w-full truncate text-[11px] font-bold uppercase tracking-wider text-[#5c6e64]">
                 {account.institutionName}
@@ -77,12 +113,22 @@ export function AccountCard({ account, action }: { account: Account; action?: Re
         <div className="mt-4 border-t border-[#1b2a21]/30 pt-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-3 sm:flex sm:flex-row sm:items-center sm:gap-5">
+              {usedCredit !== null && (
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#5c6e64]">
+                    Used
+                  </p>
+                  <p className="mt-0.5 text-[13px] font-bold text-[#f4f7f5]">
+                    {formatCurrency(usedCredit, account.currency)}
+                  </p>
+                </div>
+              )}
               {availableCredit !== null && (
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-widest text-[#5c6e64]">
                     Available
                   </p>
-                  <p className="mt-0.5 text-[13px] font-bold text-[#f4f7f5]">
+                  <p className="mt-0.5 text-[13px] font-semibold text-[#8d9f95]">
                     {formatCurrency(availableCredit, account.currency)}
                   </p>
                 </div>

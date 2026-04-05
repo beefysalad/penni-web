@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
@@ -65,6 +66,7 @@ function mapAccountToForm(account: Account): AccountForm {
 }
 
 export default function AccountsPage() {
+  const router = useRouter()
   const accountsQuery = useAccountsQuery()
   const createAccountMutation = useCreateAccountMutation()
   const updateAccountMutation = useUpdateAccountMutation()
@@ -452,11 +454,15 @@ export default function AccountsPage() {
                 <AccountCard
                   key={account.id}
                   account={account}
+                  onClick={() => router.push(`/dashboard/accounts/${account.id}`)}
                   action={
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => handleEdit(account)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleEdit(account)
+                        }}
                         className="flex size-9 items-center justify-center rounded-full bg-[#18221d] transition hover:bg-[#213129]"
                         aria-label={`Edit ${account.name}`}
                       >
@@ -464,13 +470,14 @@ export default function AccountsPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={(event) => {
+                          event.stopPropagation()
                           deleteAccountMutation.mutate(account.id, {
                             onSuccess: () => toast.success(`${account.name} deleted.`),
                             onError: (error) =>
                               toast.error(error instanceof Error ? error.message : 'Could not delete account.'),
                           })
-                        }
+                        }}
                         className="flex size-9 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
                         aria-label={`Delete ${account.name}`}
                       >
