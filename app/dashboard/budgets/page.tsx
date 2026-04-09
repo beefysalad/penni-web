@@ -13,13 +13,20 @@ import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
 import FormErrorMessage from '@/components/ui/form-error-message'
 import { FinanceEmptyState } from '@/components/finance/management-components'
-import { useBudgetsQuery, useCreateBudgetMutation, useDeleteBudgetMutation, useUpdateBudgetMutation } from '@/hooks/finance/use-budgets-query'
+import {
+  useBudgetsQuery,
+  useCreateBudgetMutation,
+  useDeleteBudgetMutation,
+  useUpdateBudgetMutation,
+} from '@/hooks/finance/use-budgets-query'
 import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { useTransactionsQuery } from '@/hooks/finance/use-transactions-query'
 import { getSpentForBudget } from '@/lib/selectors'
 import type { Budget } from '@/lib/finance.types'
 import { formatCurrency, formatCompactDate } from '@/lib/formatters'
 import { Goal, Pencil, Plus, Trash2 } from 'lucide-react'
+
+// ─── Types & constants ─────────────────────────────────────────────────────────
 
 type BudgetForm = {
   name: string
@@ -29,6 +36,8 @@ type BudgetForm = {
   periodStart: string
   periodEnd: string
 }
+
+type BudgetTimingStatus = 'CURRENT' | 'UPCOMING' | 'PAST'
 
 const now = new Date()
 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
@@ -50,22 +59,25 @@ const budgetFormSchema = z
       .string()
       .trim()
       .min(1, 'Enter a budget amount.')
-      .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, 'Enter a valid budget amount.'),
+      .refine(
+        (v) => Number.isFinite(Number(v)) && Number(v) > 0,
+        'Enter a valid budget amount.'
+      ),
     categoryId: z.string(),
     alertThreshold: z
       .string()
       .trim()
       .min(1, 'Enter an alert threshold.')
-      .refine((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100, 'Alert threshold must be between 1 and 100.'),
+      .refine(
+        (v) => Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 100,
+        'Alert threshold must be between 1 and 100.'
+      ),
     periodStart: z.string().min(1, 'Choose a start date.'),
     periodEnd: z.string().min(1, 'Choose an end date.'),
   })
-  .superRefine((value, ctx) => {
-    if (!value.periodStart || !value.periodEnd) {
-      return
-    }
-
-    if (new Date(value.periodEnd).getTime() < new Date(value.periodStart).getTime()) {
+  .superRefine((v, ctx) => {
+    if (!v.periodStart || !v.periodEnd) return
+    if (new Date(v.periodEnd).getTime() < new Date(v.periodStart).getTime()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['periodEnd'],
@@ -73,6 +85,8 @@ const budgetFormSchema = z
       })
     }
   })
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function toIsoDate(dateValue: string, endOfDay = false) {
   return new Date(`${dateValue}T${endOfDay ? '23:59:59' : '00:00:00'}`).toISOString()
@@ -89,45 +103,135 @@ function mapBudgetToForm(budget: Budget): BudgetForm {
   }
 }
 
-type BudgetTimingStatus = 'CURRENT' | 'UPCOMING' | 'PAST'
-
-function getBudgetTimingStatus(budget: Budget, now: Date): BudgetTimingStatus {
+function getBudgetTimingStatus(budget: Budget, today: Date): BudgetTimingStatus {
   const start = new Date(budget.periodStart)
   const end = new Date(budget.periodEnd)
-
-  if (now < start) return 'UPCOMING'
-  if (now > end) return 'PAST'
+  if (today < start) return 'UPCOMING'
+  if (today > end) return 'PAST'
   return 'CURRENT'
 }
 
-function getBudgetStatusLabel(status: BudgetTimingStatus) {
-  if (status === 'CURRENT') return 'Current'
-  if (status === 'UPCOMING') return 'Upcoming'
-  return 'Past'
-}
-
-function getBudgetStatusTone(status: BudgetTimingStatus) {
-  if (status === 'CURRENT') return 'text-[#8bff62] bg-[#16211b]'
-  if (status === 'UPCOMING') return 'text-[#9dd6ff] bg-[#151f25]'
-  return 'text-[#93a19a] bg-[#18221d]'
-}
-
-function getBudgetProgressState(spent: number, limit: number, alertThreshold: number) {
+function getProgressState(spent: number, limit: number, alertThreshold: number) {
   const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
   const isOver = spent > limit
   const isReached = !isOver && limit > 0 && spent >= limit
   const isWarning = pct >= alertThreshold
-
   return {
     pct,
     isOver,
-    isReached,
-    isWarning,
-    label: isOver ? 'Over budget' : isReached ? 'Budget reached' : isWarning ? 'Approaching limit' : 'On track',
-    labelClass: isOver ? 'text-[#ff8a94]' : isReached ? 'text-[#ffc857]' : isWarning ? 'text-[#ffc857]' : 'text-[#93a19a]',
-    barColor: isOver ? '#ff8a94' : isReached ? '#ffc857' : isWarning ? '#ffc857' : '#8bff62',
+    label: isOver ? 'Over budget' : isReached ? 'Budget reached' : isWarning ? 'Approaching' : 'On track',
+    labelColor: isOver ? '#ff8a94' : isReached || isWarning ? '#ffc857' : '#4a5650',
+    barColor: isOver ? '#ff8a94' : isReached || isWarning ? '#ffc857' : '#8bff62',
   }
 }
+
+// ─── Budget row ────────────────────────────────────────────────────────────────
+
+function BudgetRow({
+  budget,
+  spent,
+  categoryName,
+  onEdit,
+  onDelete,
+}: {
+  budget: Budget
+  spent: number
+  categoryName: string | null
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const limit = Number(budget.amount)
+  const remaining = limit - spent
+  const { pct, label, labelColor, barColor } = getProgressState(spent, limit, budget.alertThreshold)
+
+  return (
+    <div className="flex flex-col gap-3 rounded-[20px] border border-[#17211c] bg-[#0f1512] p-4">
+      {/* Top row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-bold text-[#f4f7f5]">
+            {budget.name || categoryName || 'Unnamed budget'}
+          </p>
+          <p className="mt-0.5 text-[11px] font-medium text-[#4a5650]">
+            {formatCompactDate(budget.periodStart)} → {formatCompactDate(budget.periodEnd)}
+            {categoryName ? <span className="ml-2 text-[#41d6b2]">{categoryName}</span> : null}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex size-8 items-center justify-center rounded-full bg-[#18221d] transition hover:bg-[#213129]"
+            aria-label="Edit budget"
+          >
+            <Pencil className="size-3.5 text-[#8bff62]" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="flex size-8 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
+            aria-label="Delete budget"
+          >
+            <Trash2 className="size-3.5 text-[#ff8a94]" />
+          </button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1a2c1f]">
+        <div
+          className="h-full rounded-full transition-all duration-300"
+          style={{ width: `${pct}%`, backgroundColor: barColor }}
+        />
+      </div>
+
+      {/* Bottom row */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[12px] font-semibold" style={{ color: remaining < 0 ? '#ff8a94' : '#93a19a' }}>
+          {remaining < 0 ? 'Over ' : ''}{formatCurrency(Math.abs(remaining), budget.currency)} left
+          <span className="ml-1.5 font-normal text-[#4a5650]">
+            of {formatCurrency(limit, budget.currency)}
+          </span>
+        </p>
+        <span className="text-[11px] font-bold" style={{ color: labelColor }}>
+          {label}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Section block ─────────────────────────────────────────────────────────────
+
+function BudgetSection({
+  title,
+  badge,
+  badgeColor,
+  children,
+}: {
+  title: string
+  badge: string
+  badgeColor: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between px-0.5">
+        <h3 className="text-[13px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">{title}</h3>
+        <span
+          className="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+          style={{ color: badgeColor, backgroundColor: `${badgeColor}15` }}
+        >
+          {badge}
+        </span>
+      </div>
+      <div className="flex flex-col gap-2.5">{children}</div>
+    </div>
+  )
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function BudgetsPage() {
   const budgetsQuery = useBudgetsQuery()
@@ -139,6 +243,7 @@ export default function BudgetsPage() {
 
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null)
   const [showComposer, setShowComposer] = useState(false)
+
   const {
     register,
     handleSubmit,
@@ -160,45 +265,32 @@ export default function BudgetsPage() {
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>()
-    for (const category of categories) map.set(category.id, category.name)
+    for (const c of categories) map.set(c.id, c.name)
     return map
   }, [categories])
 
   const sortedBudgets = useMemo(() => {
+    const order: Record<BudgetTimingStatus, number> = { CURRENT: 0, UPCOMING: 1, PAST: 2 }
     return [...budgets].sort((a, b) => {
-      const statusOrder: Record<BudgetTimingStatus, number> = {
-        CURRENT: 0,
-        UPCOMING: 1,
-        PAST: 2,
-      }
-
-      const aStatus = getBudgetTimingStatus(a, today)
-      const bStatus = getBudgetTimingStatus(b, today)
-
-      if (aStatus !== bStatus) {
-        return statusOrder[aStatus] - statusOrder[bStatus]
-      }
-
-      if (aStatus === 'PAST') {
+      const as = getBudgetTimingStatus(a, today)
+      const bs = getBudgetTimingStatus(b, today)
+      if (as !== bs) return order[as] - order[bs]
+      if (as === 'PAST')
         return new Date(b.periodEnd).getTime() - new Date(a.periodEnd).getTime()
-      }
-
       return new Date(a.periodStart).getTime() - new Date(b.periodStart).getTime()
     })
   }, [budgets, today])
 
   const currentBudgets = useMemo(
-    () => sortedBudgets.filter((budget) => getBudgetTimingStatus(budget, today) === 'CURRENT'),
+    () => sortedBudgets.filter((b) => getBudgetTimingStatus(b, today) === 'CURRENT'),
     [sortedBudgets, today]
   )
-
   const upcomingBudgets = useMemo(
-    () => sortedBudgets.filter((budget) => getBudgetTimingStatus(budget, today) === 'UPCOMING'),
+    () => sortedBudgets.filter((b) => getBudgetTimingStatus(b, today) === 'UPCOMING'),
     [sortedBudgets, today]
   )
-
   const pastBudgets = useMemo(
-    () => sortedBudgets.filter((budget) => getBudgetTimingStatus(budget, today) === 'PAST'),
+    () => sortedBudgets.filter((b) => getBudgetTimingStatus(b, today) === 'PAST'),
     [sortedBudgets, today]
   )
 
@@ -209,12 +301,10 @@ export default function BudgetsPage() {
   }
 
   const handleBudgetSubmit = (values: BudgetForm) => {
-    const amount = Number(values.amount)
-
     const payload = {
       name: values.name.trim() || undefined,
       categoryId: values.categoryId || undefined,
-      amount: amount.toFixed(2),
+      amount: Number(values.amount).toFixed(2),
       currency: 'PHP',
       alertThreshold: Number(values.alertThreshold || 80),
       periodStart: toIsoDate(values.periodStart),
@@ -225,196 +315,103 @@ export default function BudgetsPage() {
       updateBudgetMutation.mutate(
         { id: editingBudgetId, input: payload },
         {
-          onSuccess: () => {
-            toast.success('Budget updated.')
-            resetForm()
-          },
-          onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not update budget.'),
+          onSuccess: () => { toast.success('Budget updated.'); resetForm() },
+          onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not update budget.'),
         }
       )
       return
     }
 
     createBudgetMutation.mutate(payload, {
-      onSuccess: () => {
-        toast.success('Budget created.')
-        resetForm()
-      },
-      onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not create budget.'),
+      onSuccess: () => { toast.success('Budget created.'); resetForm() },
+      onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not create budget.'),
     })
   }
+
+  // ── Composer form ────────────────────────────────────────────────────────────
 
   const composerContent = (
     <form
       onSubmit={handleSubmit(handleBudgetSubmit)}
-      className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5"
+      className="rounded-[24px] border border-[#17211c] bg-[#111916] p-5"
     >
-      <div className="flex items-start justify-between gap-4 max-lg:hidden">
+      <div className="hidden items-start justify-between gap-4 lg:flex">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
-            {editingBudgetId ? 'Edit budget' : 'Create budget'}
+          <p className="text-[10px] font-bold uppercase tracking-[2px] text-[#4a5650]">
+            {editingBudgetId ? 'Editing budget' : 'New budget'}
           </p>
-          <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
+          <h2 className="mt-1.5 text-[20px] font-bold tracking-tight text-[#f4f7f5]">
             {editingBudgetId ? 'Adjust this limit' : 'Set a spending guardrail'}
           </h2>
-          <p className="mt-2 text-[14px] leading-relaxed font-medium text-[#7f8c86]">
-            Budgets track your category spending against a limit over a period you define.
-          </p>
         </div>
-        <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
-          <Goal className="size-5 text-[#ffc857]" />
+        <div className="flex size-10 items-center justify-center rounded-full bg-[#18221d]">
+          <Goal className="size-4 text-[#ffc857]" />
         </div>
       </div>
 
-      <div className="mt-6 space-y-4 max-lg:mt-0">
-        <div className="space-y-2">
-          <Label htmlFor="budget-name">Budget name</Label>
-          <Input id="budget-name" {...register('name')} placeholder="e.g. Food, Shopping, Family" />
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:mt-5 max-lg:mt-0">
+        <div className="space-y-1.5">
+          <Label htmlFor="budget-name" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Budget name</Label>
+          <Input id="budget-name" {...register('name')} placeholder="Food, Shopping, Bills…" />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="budget-category">Expense category</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="budget-category" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Category</Label>
           <select
             id="budget-category"
             value={categoryId}
-            onChange={(e) =>
-              setValue('categoryId', e.target.value, {
-                shouldDirty: true,
-                shouldTouch: true,
-                shouldValidate: true,
-              })
-            }
-            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+            onChange={(e) => setValue('categoryId', e.target.value, { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
+            className="h-11 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[14px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31]"
           >
             <option value="">Optional category</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>{category.name}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="budget-amount">Amount</Label>
-            <Input id="budget-amount" type="number" {...register('amount')} placeholder="5000.00" />
-            <FormErrorMessage message={errors.amount?.message} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="budget-alert">Alert threshold (%)</Label>
-            <Input id="budget-alert" type="number" min="1" max="100" {...register('alertThreshold')} placeholder="80" />
-            <FormErrorMessage message={errors.alertThreshold?.message} />
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="budget-amount" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Amount</Label>
+          <Input id="budget-amount" type="number" {...register('amount')} placeholder="5000.00" />
+          <FormErrorMessage message={errors.amount?.message} />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="budget-start">Period start</Label>
-            <Input id="budget-start" type="date" {...register('periodStart')} />
-            <FormErrorMessage message={errors.periodStart?.message} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="budget-end">Period end</Label>
-            <Input id="budget-end" type="date" {...register('periodEnd')} />
-            <FormErrorMessage message={errors.periodEnd?.message} />
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="budget-alert" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Alert threshold (%)</Label>
+          <Input id="budget-alert" type="number" min="1" max="100" {...register('alertThreshold')} placeholder="80" />
+          <FormErrorMessage message={errors.alertThreshold?.message} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="budget-start" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Period start</Label>
+          <Input id="budget-start" type="date" {...register('periodStart')} />
+          <FormErrorMessage message={errors.periodStart?.message} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="budget-end" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Period end</Label>
+          <Input id="budget-end" type="date" {...register('periodEnd')} />
+          <FormErrorMessage message={errors.periodEnd?.message} />
         </div>
       </div>
 
-      <div className="mt-6 flex gap-3">
+      <div className="mt-5 flex gap-2.5">
         <Button
           type="submit"
-          className="flex-1"
+          className="flex-1 rounded-full"
           disabled={createBudgetMutation.isPending || updateBudgetMutation.isPending}
         >
           <Plus className="size-4" />
-          {editingBudgetId ? 'Save budget' : 'Create budget'}
+          {editingBudgetId ? 'Save changes' : 'Create budget'}
         </Button>
-        <Button type="button" variant="secondary" onClick={resetForm}>Cancel</Button>
+        <Button type="button" variant="secondary" className="rounded-full" onClick={resetForm}>
+          Cancel
+        </Button>
       </div>
     </form>
   )
 
-  const renderBudgetList = (items: Budget[]) => (
-    <div className="overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
-      <div className="divide-y divide-[#17211c]/60">
-        {items.map((budget) => {
-          const spent = getSpentForBudget(budget, transactions)
-          const limit = Number(budget.amount)
-          const remaining = limit - spent
-          const { pct, label, labelClass, barColor } = getBudgetProgressState(
-            spent,
-            limit,
-            budget.alertThreshold
-          )
-          const timingStatus = getBudgetTimingStatus(budget, today)
-          const categoryName = categoryMap.get(budget.categoryId ?? '')
-
-          return (
-            <div key={budget.id} className="p-4">
-              <div className="overflow-hidden rounded-[20px] border border-[#17211c] bg-[#0f1512] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-[16px] font-bold text-[#f4f7f5]">
-                        {budget.name || categoryName || 'Unnamed budget'}
-                      </p>
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[1.3px] ${getBudgetStatusTone(timingStatus)}`}>
-                        {getBudgetStatusLabel(timingStatus)}
-                      </span>
-                      {categoryName ? (
-                        <span className="rounded-full bg-[#18221d] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[1.3px] text-[#93a19a]">
-                          {categoryName}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 text-[12px] font-medium text-[#7f8c86]">
-                      {formatCurrency(spent, budget.currency)} of {formatCurrency(limit, budget.currency)} · {formatCompactDate(budget.periodStart)} to {formatCompactDate(budget.periodEnd)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingBudgetId(budget.id)
-                        reset(mapBudgetToForm(budget))
-                        setShowComposer(true)
-                      }}
-                      className="flex size-9 items-center justify-center rounded-full bg-[#18221d] transition hover:bg-[#213129]"
-                      aria-label={`Edit ${budget.name || 'budget'}`}
-                    >
-                      <Pencil className="size-4 text-[#8bff62]" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        deleteBudgetMutation.mutate(budget.id, {
-                          onSuccess: () => toast.success(`${budget.name || 'Budget'} deleted.`),
-                          onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not delete budget.'),
-                        })
-                      }
-                      className="flex size-9 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
-                      aria-label={`Delete ${budget.name || 'budget'}`}
-                    >
-                      <Trash2 className="size-4 text-[#ff8a94]" />
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#1a2c1f]">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: barColor }} />
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <p className="text-[13px] font-semibold" style={{ color: remaining < 0 ? '#ff8a94' : '#dce2de' }}>
-                    {remaining < 0 ? 'Over ' : 'Left '}{formatCurrency(Math.abs(remaining), budget.currency)}
-                  </p>
-                  <span className={`text-[12px] font-semibold ${labelClass}`}>{label}</span>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <>
@@ -422,113 +419,145 @@ export default function BudgetsPage() {
         <AppPageHeader
           eyebrow="Budget planning"
           title="Budgets"
-          subtitle="Set monthly spending limits and keep category drift visible."
+          subtitle="Set spending limits and track category drift over any period."
           inverted
         />
       </DashboardHeaderShell>
 
-      <div className="flex flex-col gap-6 px-4 pb-28 pt-6 md:px-6 lg:px-8">
-        <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-[12px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">
-                Guardrails
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#93a19a]">
-                Open the composer only when you need to add or adjust a budget.
-              </p>
+      <div className="flex flex-col gap-5 px-4 pb-28 pt-6 md:px-6 lg:px-8">
+
+        {/* ── Stat chips + action row ── */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {/* Current chip */}
+            <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
+              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#4a5650]">Current</span>
+              <span className="text-[15px] font-bold text-[#8bff62]">{currentBudgets.length}</span>
             </div>
-            <Button onClick={() => setShowComposer((current) => !current)} className="lg:self-stretch">
-              <Plus className="size-4" />
-              {showComposer ? 'Close composer' : 'New budget'}
-            </Button>
+            {/* Upcoming chip */}
+            <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
+              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#4a5650]">Upcoming</span>
+              <span className="text-[15px] font-bold text-[#9dd6ff]">{upcomingBudgets.length}</span>
+            </div>
+            {/* Past chip */}
+            <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
+              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#4a5650]">Past</span>
+              <span className="text-[15px] font-bold text-[#93a19a]">{pastBudgets.length}</span>
+            </div>
           </div>
+
+          <Button
+            className="rounded-full px-5"
+            onClick={() => {
+              if (showComposer) {
+                resetForm()
+              } else {
+                reset(DEFAULT_FORM)
+                setEditingBudgetId(null)
+                setShowComposer(true)
+              }
+            }}
+          >
+            <Plus className="size-4" />
+            {showComposer ? 'Close' : 'New budget'}
+          </Button>
         </div>
 
+        {/* ── Desktop composer ── */}
         {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
-            <p className="text-[11px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">Current</p>
-            <p className="mt-3 text-[28px] font-bold tracking-tight text-[#8bff62]">{currentBudgets.length}</p>
-            <p className="mt-1 text-[13px] font-medium text-[#7f8c86]">Budgets active right now.</p>
-          </div>
-          <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
-            <p className="text-[11px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">Upcoming</p>
-            <p className="mt-3 text-[28px] font-bold tracking-tight text-[#9dd6ff]">{upcomingBudgets.length}</p>
-            <p className="mt-1 text-[13px] font-medium text-[#7f8c86]">Scheduled for a future period.</p>
-          </div>
-          <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
-            <p className="text-[11px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">Past</p>
-            <p className="mt-3 text-[28px] font-bold tracking-tight text-[#93a19a]">{pastBudgets.length}</p>
-            <p className="mt-1 text-[13px] font-medium text-[#7f8c86]">Older periods kept for reference.</p>
-          </div>
-        </div>
-
-        <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">Current budgets</h3>
-              <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">Only budgets whose period includes today show up here.</p>
-            </div>
-            <span className="rounded-full bg-[#16211b] px-3 py-1 text-[11px] font-bold text-[#8bff62]">
-              {currentBudgets.length} current
-            </span>
-          </div>
-
-          <div className="mt-5">
-            {budgetsQuery.isLoading ? (
-              <div className="space-y-3 p-4">
-                <div className="h-24 rounded-[20px] bg-[#131b17] animate-pulse" />
-                <div className="h-24 rounded-[20px] bg-[#131b17] animate-pulse" />
-              </div>
-            ) : currentBudgets.length > 0 ? (
-              renderBudgetList(currentBudgets)
-            ) : (
-              <FinanceEmptyState
-                icon={Goal}
-                title="No current budgets"
-                description={
-                  budgets.length > 0
-                    ? 'You have budgets saved, but none are active for today.'
-                    : 'Set a budget to start tracking category drift and remaining room.'
+        {/* ── Current budgets ── */}
+        <BudgetSection title="Current" badge={`${currentBudgets.length} active`} badgeColor="#8bff62">
+          {budgetsQuery.isLoading ? (
+            <>
+              <div className="h-[88px] animate-pulse rounded-[20px] bg-[#131b17]" />
+              <div className="h-[88px] animate-pulse rounded-[20px] bg-[#131b17]" />
+            </>
+          ) : currentBudgets.length > 0 ? (
+            currentBudgets.map((budget) => (
+              <BudgetRow
+                key={budget.id}
+                budget={budget}
+                spent={getSpentForBudget(budget, transactions)}
+                categoryName={categoryMap.get(budget.categoryId ?? '') ?? null}
+                onEdit={() => {
+                  setEditingBudgetId(budget.id)
+                  reset(mapBudgetToForm(budget))
+                  setShowComposer(true)
+                }}
+                onDelete={() =>
+                  deleteBudgetMutation.mutate(budget.id, {
+                    onSuccess: () => toast.success(`${budget.name || 'Budget'} deleted.`),
+                    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not delete.'),
+                  })
                 }
               />
-            )}
-          </div>
-        </div>
+            ))
+          ) : (
+            <FinanceEmptyState
+              icon={Goal}
+              title="No current budgets"
+              description={
+                budgets.length > 0
+                  ? 'You have budgets saved, but none are active for today.'
+                  : 'Create your first budget to start tracking spending against a limit.'
+              }
+            />
+          )}
+        </BudgetSection>
 
+        {/* ── Upcoming budgets ── */}
         {!budgetsQuery.isLoading && upcomingBudgets.length > 0 ? (
-          <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-[24px] font-bold tracking-tight text-[#f4f7f5]">Upcoming budgets</h3>
-                <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">Already set up, but their period has not started yet.</p>
-              </div>
-              <span className="rounded-full bg-[#151f25] px-3 py-1 text-[11px] font-bold text-[#9dd6ff]">
-                {upcomingBudgets.length} upcoming
-              </span>
-            </div>
-            <div className="mt-5">{renderBudgetList(upcomingBudgets)}</div>
-          </div>
+          <BudgetSection title="Upcoming" badge={`${upcomingBudgets.length} scheduled`} badgeColor="#9dd6ff">
+            {upcomingBudgets.map((budget) => (
+              <BudgetRow
+                key={budget.id}
+                budget={budget}
+                spent={getSpentForBudget(budget, transactions)}
+                categoryName={categoryMap.get(budget.categoryId ?? '') ?? null}
+                onEdit={() => {
+                  setEditingBudgetId(budget.id)
+                  reset(mapBudgetToForm(budget))
+                  setShowComposer(true)
+                }}
+                onDelete={() =>
+                  deleteBudgetMutation.mutate(budget.id, {
+                    onSuccess: () => toast.success(`${budget.name || 'Budget'} deleted.`),
+                    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not delete.'),
+                  })
+                }
+              />
+            ))}
+          </BudgetSection>
         ) : null}
 
+        {/* ── Past budgets ── */}
         {!budgetsQuery.isLoading && pastBudgets.length > 0 ? (
-          <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-[24px] font-bold tracking-tight text-[#f4f7f5]">Past budgets</h3>
-                <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">Older budget periods kept for reference so they do not clutter the live view.</p>
-              </div>
-              <span className="rounded-full bg-[#18221d] px-3 py-1 text-[11px] font-bold text-[#93a19a]">
-                {pastBudgets.length} past
-              </span>
-            </div>
-            <div className="mt-5">{renderBudgetList(pastBudgets)}</div>
-          </div>
+          <BudgetSection title="Past" badge={`${pastBudgets.length} archived`} badgeColor="#93a19a">
+            {pastBudgets.map((budget) => (
+              <BudgetRow
+                key={budget.id}
+                budget={budget}
+                spent={getSpentForBudget(budget, transactions)}
+                categoryName={categoryMap.get(budget.categoryId ?? '') ?? null}
+                onEdit={() => {
+                  setEditingBudgetId(budget.id)
+                  reset(mapBudgetToForm(budget))
+                  setShowComposer(true)
+                }}
+                onDelete={() =>
+                  deleteBudgetMutation.mutate(budget.id, {
+                    onSuccess: () => toast.success(`${budget.name || 'Budget'} deleted.`),
+                    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not delete.'),
+                  })
+                }
+              />
+            ))}
+          </BudgetSection>
         ) : null}
       </div>
 
+      {/* ── Mobile sheet ── */}
       <MobileSheet
         open={showComposer}
         onClose={resetForm}

@@ -5,6 +5,7 @@ export const financeQueryKeys = {
   accounts: ['accounts'] as const,
   transactions: ['transactions'] as const,
   budgets: ['budgets'] as const,
+  debts: ['debts'] as const,
   categories: (type?: CategoryType) => ['categories', type ?? 'all'] as const,
   plannedItems: (params?: ListPlannedItemsParams) => ['planned-items', params ?? {}] as const,
 }

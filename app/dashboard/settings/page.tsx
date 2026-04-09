@@ -14,7 +14,8 @@ import {
   LogOut, 
   ChevronRight,
   Bot,
-  Shapes
+  Shapes,
+  HandCoins
 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -88,6 +89,7 @@ export default function SettingsPage() {
         { iconBg: 'bg-[#1e2a22]', iconColor: 'text-[#8bff62]', icon: Shapes, label: 'Recurring items', value: 'Upcoming scheduled bills and income', href: '/dashboard/planned-items' },
         { iconBg: 'bg-[#231b33]', iconColor: 'text-[#c89dff]', icon: Tag, label: 'Categories', value: 'Organize spending and income', href: '/dashboard/categories' },
         { iconBg: 'bg-[#2a2518]', iconColor: 'text-[#ffc857]', icon: Wallet, label: 'Budgets', value: 'Set monthly limits by category', href: '/dashboard/budgets' },
+        { iconBg: 'bg-[#1f2217]', iconColor: 'text-[#d9f27c]', icon: HandCoins, label: 'Debts', value: 'Track what you owe and what is owed to you', href: '/dashboard/debts' },
       ]
     },
     {

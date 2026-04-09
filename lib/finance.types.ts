@@ -2,6 +2,8 @@ export type AccountType = 'CASH' | 'BANK_ACCOUNT' | 'E_WALLET' | 'CREDIT_CARD' |
 export type CategoryType = 'EXPENSE' | 'INCOME';
 export type TransactionSource = 'MANUAL' | 'RECURRING' | 'IMPORTED' | 'TRANSFER';
 export type RecurrenceFrequency = 'WEEKLY' | 'MONTHLY' | 'SEMI_MONTHLY' | 'QUARTERLY' | 'YEARLY';
+export type DebtDirection = 'I_OWE' | 'OWED_TO_ME';
+export type DebtStatus = 'OPEN' | 'SETTLED';
 
 export type CreditCardDetails = {
   creditLimit: string;
@@ -79,6 +81,25 @@ export type Budget = {
   periodEnd: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type Debt = {
+  id: string;
+  clientId: string | null;
+  userId: string;
+  direction: DebtDirection;
+  status: DebtStatus;
+  title: string;
+  counterpartyName: string;
+  notes: string | null;
+  originalAmount: string | number;
+  currentBalance: string | number;
+  currency: string;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  clientUpdatedAt: string | null;
 };
 
 export function getAccountCreditLimit(account: Account) {
