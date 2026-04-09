@@ -16,7 +16,7 @@ export type TransactionMonthOption = {
 
 export function getAccountNetContribution(account: Account) {
   const balance = Number(account.balance)
-  return account.type === 'CREDIT_CARD' ? -Math.abs(balance) : balance
+  return account.type === 'CREDIT_CARD' ? -Math.max(0, balance) : balance
 }
 
 export function getNetWorth(accounts: Account[]) {

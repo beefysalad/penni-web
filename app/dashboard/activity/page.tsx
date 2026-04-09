@@ -230,6 +230,7 @@ export default function ActivityPage() {
 
     if (values.mode === 'TRANSFER') {
       const fromAccount = accounts.find((account) => account.id === values.accountId) ?? null
+      const toAccount = accounts.find((account) => account.id === values.toAccountId) ?? null
 
       if (
         fromAccount &&
@@ -239,6 +240,17 @@ export default function ActivityPage() {
         setError('amount', {
           type: 'manual',
           message: "Transfer amount exceeds the account's available balance.",
+        })
+        return
+      }
+
+      if (
+        toAccount?.type === 'CREDIT_CARD' &&
+        amount > Math.max(0, Number(toAccount.balance ?? 0))
+      ) {
+        setError('amount', {
+          type: 'manual',
+          message: "Payment exceeds the card's outstanding balance.",
         })
         return
       }
