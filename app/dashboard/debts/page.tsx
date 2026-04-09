@@ -202,34 +202,70 @@ export default function DebtsPage() {
   const composer = (
     <form
       onSubmit={onSubmit}
-      className="rounded-[24px] border border-[#17211c] bg-[#111916] p-5"
+      className="rounded-[28px] border border-[#17211c] bg-[#111916] p-5"
     >
-      <div className="hidden lg:block">
-        <p className="text-[10px] font-bold uppercase tracking-[2px] text-[#4a5650]">
-          {direction === 'I_OWE' ? 'Track outgoing debt' : 'Track incoming debt'}
-        </p>
-        <h2 className="mt-1.5 text-[20px] font-bold tracking-tight text-[#f4f7f5]">
-          Add a {direction === 'I_OWE' ? 'debt' : 'receivable'}
-        </h2>
-      </div>
-
       <input type="hidden" {...register('direction')} />
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 max-lg:mt-0">
+      <div className="rounded-[22px] bg-[#101a14] px-5 py-5 text-center">
+        <div className="mx-auto flex size-14 items-center justify-center rounded-[20px] bg-[#1f2217]">
+          <HandCoins className="size-6 text-[#d9f27c]" />
+        </div>
+        <h3 className="mt-4 text-[24px] font-semibold tracking-tight text-[#f4f7f5]">
+          {direction === 'I_OWE' ? 'Track what I owe' : 'Track what comes back'}
+        </h3>
+        <p className="mt-2 text-[15px] leading-6 text-[#7f8c86]">
+          {direction === 'I_OWE'
+            ? 'Capture money you still need to settle.'
+            : 'Capture money that other people still owe you.'}
+        </p>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setValue('direction', 'I_OWE', { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
+          className={cn(
+            'rounded-[20px] border p-4 text-left transition',
+            direction === 'I_OWE' ? 'border-[#52d776] bg-[#111c16]' : 'border-[#17211c] bg-[#131b17]'
+          )}
+        >
+          <p className="text-[15px] font-semibold text-[#f4f7f5]">Outstanding debt</p>
+          <p className="mt-1 text-xs leading-5 text-[#6d786f]">Money I still need to pay back.</p>
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setValue('direction', 'OWED_TO_ME', {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            })
+          }
+          className={cn(
+            'rounded-[20px] border p-4 text-left transition',
+            direction === 'OWED_TO_ME' ? 'border-[#52d776] bg-[#111c16]' : 'border-[#17211c] bg-[#131b17]'
+          )}
+        >
+          <p className="text-[15px] font-semibold text-[#f4f7f5]">Incoming debt</p>
+          <p className="mt-1 text-xs leading-5 text-[#6d786f]">Money that should still come back.</p>
+        </button>
+      </div>
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">Title</Label>
-          <Input {...register('title')} placeholder="Laptop advance, salary loan…" />
+          <Input {...register('title')} placeholder="Laptop advance, Borrowed cash" />
           <FormErrorMessage message={errors.title?.message} />
         </div>
         <div className="space-y-1.5">
           <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">
             {direction === 'I_OWE' ? 'I owe to' : 'Owed by'}
           </Label>
-          <Input {...register('counterpartyName')} placeholder="John, Sarah, Office coop" />
+          <Input {...register('counterpartyName')} placeholder="John, Sarah, Cooperative" />
           <FormErrorMessage message={errors.counterpartyName?.message} />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">Original amount</Label>
+          <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">Amount</Label>
           <Input {...register('originalAmount')} inputMode="decimal" placeholder="10000.00" />
           <FormErrorMessage message={errors.originalAmount?.message} />
         </div>
@@ -238,7 +274,7 @@ export default function DebtsPage() {
           <Input {...register('currency')} placeholder="PHP" maxLength={3} />
           <FormErrorMessage message={errors.currency?.message} />
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
+        <div className="space-y-1.5">
           <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">Due date</Label>
           <Input {...register('dueDate')} type="date" />
           <FormErrorMessage message={errors.dueDate?.message} />

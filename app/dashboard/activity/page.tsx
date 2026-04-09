@@ -7,7 +7,10 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
-import { TransactionRow, AccountSkeletonCard } from '@/components/finance/finance-components'
+import {
+  TransactionRow,
+  AccountSkeletonCard,
+} from '@/components/finance/finance-components'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,9 +28,22 @@ import { useAccountsQuery } from '@/hooks/finance/use-accounts-query'
 import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { groupTransactionsIntoSections } from '@/lib/selectors'
 import { TYPE_FILTERS, type TypeFilter } from '@/lib/constants'
-import { getAccountAvailableCredit, type CategoryType } from '@/lib/finance.types'
+import {
+  getAccountAvailableCredit,
+  type CategoryType,
+} from '@/lib/finance.types'
 import Link from 'next/link'
-import { ReceiptText, Search, Plus, Trash2, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, WalletCards, Calendar } from 'lucide-react'
+import {
+  ReceiptText,
+  Search,
+  Plus,
+  Trash2,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowRightLeft,
+  WalletCards,
+  Calendar,
+} from 'lucide-react'
 
 type TransactionForm = {
   mode: 'EXPENSE' | 'INCOME' | 'TRANSFER'
@@ -59,7 +75,10 @@ const transactionFormSchema = z
       .string()
       .trim()
       .min(1, 'Enter a valid amount.')
-      .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, 'Enter a valid amount.'),
+      .refine(
+        (value) => Number.isFinite(Number(value)) && Number(value) > 0,
+        'Enter a valid amount.'
+      ),
     accountId: z.string(),
     toAccountId: z.string(),
     categoryId: z.string(),
@@ -84,7 +103,11 @@ const transactionFormSchema = z
         })
       }
 
-      if (value.accountId && value.toAccountId && value.accountId === value.toAccountId) {
+      if (
+        value.accountId &&
+        value.toAccountId &&
+        value.accountId === value.toAccountId
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['toAccountId'],
@@ -139,13 +162,19 @@ export default function ActivityPage() {
   const toAccountId = useWatch({ control, name: 'toAccountId' })
   const categoryId = useWatch({ control, name: 'categoryId' })
 
-  const allTransactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data])
+  const allTransactions = useMemo(
+    () => transactionsQuery.data ?? [],
+    [transactionsQuery.data]
+  )
   const accounts = accountsQuery.data ?? []
   const transferSourceAccounts = useMemo(
     () => accounts.filter((account) => account.type !== 'CREDIT_CARD'),
     [accounts]
   )
-  const categories = mode === 'INCOME' ? incomeCategoriesQuery.data ?? [] : expenseCategoriesQuery.data ?? []
+  const categories =
+    mode === 'INCOME'
+      ? (incomeCategoriesQuery.data ?? [])
+      : (expenseCategoriesQuery.data ?? [])
   const accountNameMap = useMemo(() => {
     const map = new Map<string, string>()
     for (const account of accounts) {
@@ -154,7 +183,10 @@ export default function ActivityPage() {
     return map
   }, [accounts])
   const cashFlowTransactions = useMemo(
-    () => allTransactions.filter((transaction) => transaction.source !== 'TRANSFER'),
+    () =>
+      allTransactions.filter(
+        (transaction) => transaction.source !== 'TRANSFER'
+      ),
     [allTransactions]
   )
 
@@ -171,13 +203,22 @@ export default function ActivityPage() {
     })
   }, [allTransactions, searchQuery, activeTypeFilter])
 
-  const sections = useMemo(() => groupTransactionsIntoSections(filteredTransactions), [filteredTransactions])
+  const sections = useMemo(
+    () => groupTransactionsIntoSections(filteredTransactions),
+    [filteredTransactions]
+  )
   const totalIncome = useMemo(
-    () => cashFlowTransactions.filter((transaction) => transaction.type === 'INCOME').reduce((sum, transaction) => sum + Number(transaction.amount), 0),
+    () =>
+      cashFlowTransactions
+        .filter((transaction) => transaction.type === 'INCOME')
+        .reduce((sum, transaction) => sum + Number(transaction.amount), 0),
     [cashFlowTransactions]
   )
   const totalExpense = useMemo(
-    () => cashFlowTransactions.filter((transaction) => transaction.type === 'EXPENSE').reduce((sum, transaction) => sum + Number(transaction.amount), 0),
+    () =>
+      cashFlowTransactions
+        .filter((transaction) => transaction.type === 'EXPENSE')
+        .reduce((sum, transaction) => sum + Number(transaction.amount), 0),
     [cashFlowTransactions]
   )
   const netCashFlow = totalIncome - totalExpense
@@ -187,7 +228,10 @@ export default function ActivityPage() {
       return
     }
 
-    if (accountId && !transferSourceAccounts.some((account) => account.id === accountId)) {
+    if (
+      accountId &&
+      !transferSourceAccounts.some((account) => account.id === accountId)
+    ) {
       setValue('accountId', '', {
         shouldDirty: true,
         shouldTouch: true,
@@ -199,7 +243,8 @@ export default function ActivityPage() {
   const handleCreateTransaction = (values: TransactionForm) => {
     const title = values.title.trim()
     const amount = Number(values.amount)
-    const selectedAccount = accounts.find((account) => account.id === values.accountId) ?? null
+    const selectedAccount =
+      accounts.find((account) => account.id === values.accountId) ?? null
 
     if (
       values.mode === 'EXPENSE' &&
@@ -229,8 +274,10 @@ export default function ActivityPage() {
     clearErrors('amount')
 
     if (values.mode === 'TRANSFER') {
-      const fromAccount = accounts.find((account) => account.id === values.accountId) ?? null
-      const toAccount = accounts.find((account) => account.id === values.toAccountId) ?? null
+      const fromAccount =
+        accounts.find((account) => account.id === values.accountId) ?? null
+      const toAccount =
+        accounts.find((account) => account.id === values.toAccountId) ?? null
 
       if (
         fromAccount &&
@@ -267,11 +314,19 @@ export default function ActivityPage() {
         {
           onSuccess: () => {
             toast.success('Transfer recorded.')
-            reset({ ...DEFAULT_FORM, mode: values.mode, transactionAt: values.transactionAt })
+            reset({
+              ...DEFAULT_FORM,
+              mode: values.mode,
+              transactionAt: values.transactionAt,
+            })
             setShowComposer(false)
           },
           onError: (error) => {
-            toast.error(error instanceof Error ? error.message : 'Could not create transfer.')
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : 'Could not create transfer.'
+            )
           },
         }
       )
@@ -292,11 +347,19 @@ export default function ActivityPage() {
       {
         onSuccess: () => {
           toast.success(`${title} added to activity.`)
-          reset({ ...DEFAULT_FORM, mode: values.mode, transactionAt: values.transactionAt })
+          reset({
+            ...DEFAULT_FORM,
+            mode: values.mode,
+            transactionAt: values.transactionAt,
+          })
           setShowComposer(false)
         },
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : 'Could not create transaction.')
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : 'Could not create transaction.'
+          )
         },
       }
     )
@@ -309,15 +372,19 @@ export default function ActivityPage() {
     >
       <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Quick capture</p>
-          <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">Add a transaction</h2>
+          <p className="text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
+            Quick capture
+          </p>
+          <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
+            Add a transaction
+          </h2>
         </div>
         <div className="rounded-full bg-[#18221d] px-3 py-1 text-[11px] font-bold text-[#8bff62]">
           Live
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-2 max-lg:mt-0">
+      <div className="mt-6 grid gap-4 max-lg:mt-0 xl:grid-cols-2">
         <div className="space-y-2 lg:hidden">
           <Label>Type</Label>
           <div className="flex rounded-[20px] bg-[#0d1411] p-1.5">
@@ -329,28 +396,39 @@ export default function ActivityPage() {
                   type="button"
                   onClick={async () => {
                     const nextAccountId =
-                      item === 'TRANSFER' && !transferSourceAccounts.some((a) => a.id === accountId)
+                      item === 'TRANSFER' &&
+                      !transferSourceAccounts.some((a) => a.id === accountId)
                         ? ''
                         : accountId
                     setValue('mode', item, { shouldDirty: true })
                     setValue('categoryId', '', { shouldDirty: true })
                     setValue('accountId', nextAccountId, { shouldDirty: true })
                     setValue('toAccountId', '', { shouldDirty: true })
-                    clearErrors(['title', 'amount', 'accountId', 'toAccountId', 'categoryId'])
+                    clearErrors([
+                      'title',
+                      'amount',
+                      'accountId',
+                      'toAccountId',
+                      'categoryId',
+                    ])
                   }}
                   className={cn(
                     'flex-1 rounded-[16px] px-4 py-3 text-[15px] font-semibold transition',
                     selected ? 'bg-[#8bff62] text-[#07110a]' : 'text-[#97a49c]'
                   )}
                 >
-                  {item === 'EXPENSE' ? 'Expense' : item === 'INCOME' ? 'Income' : 'Transfer'}
+                  {item === 'EXPENSE'
+                    ? 'Expense'
+                    : item === 'INCOME'
+                      ? 'Income'
+                      : 'Transfer'}
                 </button>
               )
             })}
           </div>
         </div>
 
-        <div className="space-y-2 hidden lg:block">
+        <div className="hidden space-y-2 lg:block">
           <Label htmlFor="transaction-type">Type</Label>
           <select
             id="transaction-type"
@@ -358,16 +436,23 @@ export default function ActivityPage() {
             onChange={async (e) => {
               const newMode = e.target.value as TransactionForm['mode']
               const nextAccountId =
-                newMode === 'TRANSFER' && !transferSourceAccounts.some((a) => a.id === accountId)
+                newMode === 'TRANSFER' &&
+                !transferSourceAccounts.some((a) => a.id === accountId)
                   ? ''
                   : accountId
               setValue('mode', newMode, { shouldDirty: true })
               setValue('categoryId', '', { shouldDirty: true })
               setValue('accountId', nextAccountId, { shouldDirty: true })
               setValue('toAccountId', '', { shouldDirty: true })
-              clearErrors(['title', 'amount', 'accountId', 'toAccountId', 'categoryId'])
+              clearErrors([
+                'title',
+                'amount',
+                'accountId',
+                'toAccountId',
+                'categoryId',
+              ])
             }}
-            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
             <option value="EXPENSE">Expense</option>
             <option value="INCOME">Income</option>
@@ -377,12 +462,18 @@ export default function ActivityPage() {
 
         <div className="space-y-2">
           <Label htmlFor="transaction-date">Date</Label>
-          <Input id="transaction-date" type="date" {...register('transactionAt')} />
+          <Input
+            id="transaction-date"
+            type="date"
+            {...register('transactionAt')}
+          />
           <FormErrorMessage message={errors.transactionAt?.message} />
         </div>
 
         <div className="space-y-2 xl:col-span-2">
-          <Label htmlFor="transaction-title">{mode === 'TRANSFER' ? 'Label' : 'Title'}</Label>
+          <Label htmlFor="transaction-title">
+            {mode === 'TRANSFER' ? 'Label' : 'Title'}
+          </Label>
           <Input
             id="transaction-title"
             {...register('title')}
@@ -410,7 +501,9 @@ export default function ActivityPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="transaction-account">{mode === 'TRANSFER' ? 'From account' : 'Account'}</Label>
+          <Label htmlFor="transaction-account">
+            {mode === 'TRANSFER' ? 'From account' : 'Account'}
+          </Label>
           <select
             id="transaction-account"
             value={accountId}
@@ -421,12 +514,20 @@ export default function ActivityPage() {
                 shouldValidate: true,
               })
             }
-            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
-            <option value="">{mode === 'TRANSFER' ? 'Choose source account' : 'Optional account'}</option>
-            {(mode === 'TRANSFER' ? transferSourceAccounts : accounts).map((account) => (
-              <option key={account.id} value={account.id}>{account.name}</option>
-            ))}
+            <option value="">
+              {mode === 'TRANSFER'
+                ? 'Choose source account'
+                : 'Optional account'}
+            </option>
+            {(mode === 'TRANSFER' ? transferSourceAccounts : accounts).map(
+              (account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              )
+            )}
           </select>
           <FormErrorMessage message={errors.accountId?.message} />
         </div>
@@ -444,11 +545,13 @@ export default function ActivityPage() {
                   shouldValidate: true,
                 })
               }
-              className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+              className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
             >
               <option value="">Choose destination account</option>
               {accounts.map((account) => (
-                <option key={account.id} value={account.id}>{account.name}</option>
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
               ))}
             </select>
             <FormErrorMessage message={errors.toAccountId?.message} />
@@ -466,11 +569,13 @@ export default function ActivityPage() {
                   shouldValidate: true,
                 })
               }
-              className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+              className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
             >
               <option value="">Optional category</option>
               {categories.map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
               ))}
             </select>
           </div>
@@ -478,13 +583,24 @@ export default function ActivityPage() {
 
         <div className="space-y-2 xl:col-span-2">
           <Label htmlFor="transaction-notes">Notes</Label>
-          <Input id="transaction-notes" {...register('notes')} placeholder="Optional note" />
+          <Input
+            id="transaction-notes"
+            {...register('notes')}
+            placeholder="Optional note"
+          />
         </div>
       </div>
 
       <div className="mt-6 flex gap-3">
-        <Button type="submit" disabled={createTransactionMutation.isPending || createTransferMutation.isPending}>
-          {createTransactionMutation.isPending || createTransferMutation.isPending
+        <Button
+          type="submit"
+          disabled={
+            createTransactionMutation.isPending ||
+            createTransferMutation.isPending
+          }
+        >
+          {createTransactionMutation.isPending ||
+          createTransferMutation.isPending
             ? 'Saving...'
             : mode === 'TRANSFER'
               ? 'Save transfer'
@@ -510,26 +626,32 @@ export default function ActivityPage() {
         <AppPageHeader
           eyebrow="Transaction history"
           title="Activity"
-          subtitle="Review your income and expenses. Track where every penny goes."
+          subtitle="Review recent money movement, scan categories, and add a new entry fast."
           inverted
         />
       </DashboardHeaderShell>
 
-      <div className="flex flex-col gap-5 px-4 pt-6 pb-28 md:px-6 lg:px-8 animate-in fade-in duration-500">
+      <div className="animate-in fade-in flex flex-col gap-5 px-4 pt-6 pb-28 duration-500 md:px-6 lg:px-8">
         {transactionsQuery.isLoading ? (
-          <div className="h-48 w-full rounded-[30px] bg-[#111916] animate-pulse" />
+          <div className="h-48 w-full animate-pulse rounded-[30px] bg-[#111916]" />
         ) : (
           <div className="rounded-[30px] border border-[#1b2a21] bg-[#111916] p-5 shadow-xl shadow-black/20">
             <div className="flex flex-row items-start justify-between gap-4">
               <div className="flex-1">
-                <p className="text-[13px] font-bold text-[#73827a]">Net cash flow</p>
+                <p className="text-[13px] font-bold text-[#73827a]">
+                  Net cash flow
+                </p>
                 <h2
                   className={cn(
                     'mt-2 text-[38px] leading-none font-bold tracking-tight',
                     netCashFlow < 0 ? 'text-[#ff8a94]' : 'text-[#41d6b2]'
                   )}
                 >
-                  {netCashFlow < 0 ? '-' : '+'}₱{Math.abs(netCashFlow).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {netCashFlow < 0 ? '-' : '+'}₱
+                  {Math.abs(netCashFlow).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </h2>
               </div>
               <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
@@ -542,9 +664,15 @@ export default function ActivityPage() {
                 <div className="flex size-10 items-center justify-center rounded-full bg-[#1f3325]">
                   <ArrowUpRight className="size-5 text-[#41d6b2]" />
                 </div>
-                <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#93a19a] uppercase">Income</p>
+                <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#93a19a] uppercase">
+                  Income
+                </p>
                 <p className="mt-2 text-[17px] leading-tight font-bold text-[#41d6b2]">
-                  ₱{totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱
+                  {totalIncome.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </p>
               </div>
 
@@ -552,9 +680,15 @@ export default function ActivityPage() {
                 <div className="flex size-10 items-center justify-center rounded-full bg-[#2a1b20]">
                   <ArrowDownLeft className="size-5 text-[#ff8a94]" />
                 </div>
-                <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#93a19a] uppercase">Expenses</p>
+                <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#93a19a] uppercase">
+                  Expenses
+                </p>
                 <p className="mt-2 text-[17px] leading-tight font-bold text-[#ff8a94]">
-                  ₱{totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱
+                  {totalExpense.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </p>
               </div>
 
@@ -562,7 +696,9 @@ export default function ActivityPage() {
                 <div className="flex size-10 items-center justify-center rounded-full bg-[#2a2412]">
                   <ArrowRightLeft className="size-5 text-[#ffd66b]" />
                 </div>
-                <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#c7b27a] uppercase">Transfers</p>
+                <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#c7b27a] uppercase">
+                  Transfers
+                </p>
                 <p className="mt-2 text-[17px] leading-tight font-bold text-[#f5deb3]">
                   Balance moves only
                 </p>
@@ -575,14 +711,18 @@ export default function ActivityPage() {
                 className="flex flex-row items-center gap-2 rounded-full bg-[#18221d] px-4 py-2 whitespace-nowrap transition-colors hover:bg-[#202c26]"
               >
                 <WalletCards className="size-3.5 text-[#8bff62]" />
-                <span className="text-[11px] font-bold text-[#93a19a]">Accounts</span>
+                <span className="text-[11px] font-bold text-[#93a19a]">
+                  Accounts
+                </span>
               </Link>
               <Link
                 href="/dashboard/planned-items"
                 className="flex flex-row items-center gap-2 rounded-full bg-[#18221d] px-4 py-2 whitespace-nowrap transition-colors hover:bg-[#202c26]"
               >
                 <Calendar className="size-3.5 text-[#41d6b2]" />
-                <span className="text-[11px] font-bold text-[#93a19a]">Plan ahead</span>
+                <span className="text-[11px] font-bold text-[#93a19a]">
+                  Plan ahead
+                </span>
               </Link>
             </div>
           </div>
@@ -592,28 +732,37 @@ export default function ActivityPage() {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-[#4a5650]" />
+                <Search className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-[#4a5650]" />
                 <input
                   type="text"
                   placeholder="Search activity..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-2xl border border-[#17211c] bg-[#131b17] py-3.5 pl-11 pr-4 text-[15px] text-[#f4f7f5] placeholder:text-[#4a5650] focus:border-[#2a3a31] focus:outline-none focus:ring-1 focus:ring-[#2a3a31]"
+                  className="w-full rounded-2xl border border-[#17211c] bg-[#131b17] py-3.5 pr-4 pl-11 text-[15px] text-[#f4f7f5] placeholder:text-[#4a5650] focus:border-[#2a3a31] focus:ring-1 focus:ring-[#2a3a31] focus:outline-none"
                 />
               </div>
 
-              <Button onClick={() => setShowComposer((current) => !current)} className="lg:self-stretch">
+              <Button
+                onClick={() => setShowComposer((current) => !current)}
+                className="lg:self-stretch"
+              >
                 <Plus className="size-4" />
                 {showComposer ? 'Close composer' : 'New transaction'}
               </Button>
             </div>
 
-            <div className="flex flex-row items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <div className="no-scrollbar flex flex-row items-center gap-2 overflow-x-auto pb-1">
               {TYPE_FILTERS.map((filter) => (
-                <button key={filter} onClick={() => setActiveTypeFilter(filter as TypeFilter)} className="focus:outline-none">
+                <button
+                  key={filter}
+                  onClick={() => setActiveTypeFilter(filter as TypeFilter)}
+                  className="focus:outline-none"
+                >
                   <Pill
                     label={filter}
-                    variant={activeTypeFilter === filter ? 'selected' : 'default'}
+                    variant={
+                      activeTypeFilter === filter ? 'selected' : 'default'
+                    }
                     className="cursor-pointer transition-all active:scale-95"
                   />
                 </button>
@@ -622,7 +771,9 @@ export default function ActivityPage() {
           </div>
         </div>
 
-        {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}
+        {showComposer ? (
+          <div className="hidden lg:block">{composerContent}</div>
+        ) : null}
 
         <div className="flex flex-col gap-6">
           {transactionsQuery.isLoading ? (
@@ -634,22 +785,33 @@ export default function ActivityPage() {
           ) : sections.length > 0 ? (
             sections.map((section) => (
               <div key={section.title} className="flex flex-col gap-2.5">
-                <h4 className="px-1 text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">{section.title}</h4>
+                <h4 className="px-1 text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
+                  {section.title}
+                </h4>
                 <div className="overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
                   {section.data.map((transaction, index) => (
                     <TransactionRow
                       key={transaction.id}
                       transaction={transaction}
-                      accountLabel={transaction.accountId ? accountNameMap.get(transaction.accountId) ?? null : null}
+                      accountLabel={
+                        transaction.accountId
+                          ? (accountNameMap.get(transaction.accountId) ?? null)
+                          : null
+                      }
                       isLast={index === section.data.length - 1}
                       action={
                         <button
                           type="button"
                           onClick={() =>
                             deleteTransactionMutation.mutate(transaction.id, {
-                              onSuccess: () => toast.success(`${transaction.title} deleted.`),
+                              onSuccess: () =>
+                                toast.success(`${transaction.title} deleted.`),
                               onError: (error) =>
-                                toast.error(error instanceof Error ? error.message : 'Could not delete transaction.'),
+                                toast.error(
+                                  error instanceof Error
+                                    ? error.message
+                                    : 'Could not delete transaction.'
+                                ),
                             })
                           }
                           className="flex size-8 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
@@ -664,13 +826,20 @@ export default function ActivityPage() {
               </div>
             ))
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-[30px] bg-[#0f1512] py-20 px-6 text-center border border-[#17211c]">
-              <div className="flex size-16 items-center justify-center rounded-full border border-[#213227] bg-[#16211b] shadow-[0_10px_30px_rgba(0,0,0,0.18)] mb-5">
-                <ReceiptText className="size-8 text-[#8bff62]" strokeWidth={2.2} />
+            <div className="flex flex-col items-center justify-center rounded-[30px] border border-[#17211c] bg-[#0f1512] px-6 py-20 text-center">
+              <div className="mb-5 flex size-16 items-center justify-center rounded-full border border-[#213227] bg-[#16211b] shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+                <ReceiptText
+                  className="size-8 text-[#8bff62]"
+                  strokeWidth={2.2}
+                />
               </div>
-              <h4 className="text-[18px] font-bold text-[#f4f7f5]">No history found</h4>
-              <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86] max-w-[240px]">
-                {searchQuery ? `No matches for "${searchQuery}"` : "You haven't logged any transactions yet."}
+              <h4 className="text-[18px] font-bold text-[#f4f7f5]">
+                No history found
+              </h4>
+              <p className="mt-2 max-w-[240px] text-[14px] leading-relaxed font-medium text-[#7f8c86]">
+                {searchQuery
+                  ? `No matches for "${searchQuery}"`
+                  : "You haven't logged any transactions yet."}
               </p>
             </div>
           )}

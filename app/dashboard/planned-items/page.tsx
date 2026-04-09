@@ -76,10 +76,19 @@ const plannedItemFormSchema = z
       .string()
       .trim()
       .min(1, 'Enter a valid amount.')
-      .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, 'Enter a valid amount.'),
+      .refine(
+        (value) => Number.isFinite(Number(value)) && Number(value) > 0,
+        'Enter a valid amount.'
+      ),
     accountId: z.string(),
     startDate: z.string().min(1, 'Choose a start date.'),
-    recurrence: z.enum(['WEEKLY', 'MONTHLY', 'SEMI_MONTHLY', 'QUARTERLY', 'YEARLY']),
+    recurrence: z.enum([
+      'WEEKLY',
+      'MONTHLY',
+      'SEMI_MONTHLY',
+      'QUARTERLY',
+      'YEARLY',
+    ]),
     firstSemiMonthlyDay: z.string(),
     secondSemiMonthlyDay: z.string(),
   })
@@ -115,7 +124,11 @@ const plannedItemFormSchema = z
       })
     }
 
-    if (Number.isInteger(first) && Number.isInteger(second) && first === second) {
+    if (
+      Number.isInteger(first) &&
+      Number.isInteger(second) &&
+      first === second
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['secondSemiMonthlyDay'],
@@ -207,7 +220,10 @@ export default function PlannedItemsPage() {
   const transactions = transactionsQuery.data ?? []
 
   const plannedItemsWithState = useMemo(
-    () => plannedItems.map((item) => getPlannedItemRecurringState(item, transactions)),
+    () =>
+      plannedItems.map((item) =>
+        getPlannedItemRecurringState(item, transactions)
+      ),
     [plannedItems, transactions]
   )
 
@@ -225,7 +241,9 @@ export default function PlannedItemsPage() {
   const requiresAccount = type === 'INCOME'
   const isSemiMonthly = recurrence === 'SEMI_MONTHLY'
   const isLoading =
-    plannedItemsQuery.isLoading || accountsQuery.isLoading || transactionsQuery.isLoading
+    plannedItemsQuery.isLoading ||
+    accountsQuery.isLoading ||
+    transactionsQuery.isLoading
 
   const resetComposer = () => {
     reset(DEFAULT_PLANNED_ITEM_FORM)
@@ -296,7 +314,9 @@ export default function PlannedItemsPage() {
       },
       {
         onSuccess: () => {
-          toast.success(`${item.item.title} ${getCompletionToastLabel(item.item.type)}.`)
+          toast.success(
+            `${item.item.title} ${getCompletionToastLabel(item.item.type)}.`
+          )
         },
         onError: (error) => {
           toast.error(
@@ -345,7 +365,12 @@ export default function PlannedItemsPage() {
                 : 'Recurring income stays projected until the money actually lands.'}
             </p>
           </div>
-          <span className={cn('rounded-full px-3 py-1 text-[11px] font-bold', accentClassName)}>
+          <span
+            className={cn(
+              'rounded-full px-3 py-1 text-[11px] font-bold',
+              accentClassName
+            )}
+          >
             {items.length} items
           </span>
         </div>
@@ -361,7 +386,7 @@ export default function PlannedItemsPage() {
               {sections.map((section) => (
                 <div key={section.title} className="p-3">
                   <div className="px-2 pb-2">
-                    <p className="text-[11px] font-bold uppercase tracking-[1.8px] text-[#6f7c75]">
+                    <p className="text-[11px] font-bold tracking-[1.8px] text-[#6f7c75] uppercase">
                       {section.title}
                     </p>
                   </div>
@@ -390,7 +415,9 @@ export default function PlannedItemsPage() {
                             ) : null}
                             <button
                               type="button"
-                              onClick={() => handleDeletePlannedItem(entry.item)}
+                              onClick={() =>
+                                handleDeletePlannedItem(entry.item)
+                              }
                               className={cn(
                                 'flex size-8 items-center justify-center rounded-full transition',
                                 entry.item.type === 'EXPENSE'
@@ -444,8 +471,8 @@ export default function PlannedItemsPage() {
             Add a recurring item
           </h2>
           <p className="mt-2 text-[14px] leading-relaxed font-medium text-[#7f8c86]">
-            Bills and income both live here. Income is connected to an
-            account, just like the mobile flow.
+            Bills and income both live here. Income is connected to an account,
+            just like the mobile flow.
           </p>
         </div>
         <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
@@ -453,8 +480,8 @@ export default function PlannedItemsPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-2 max-lg:mt-0">
-        <div className="space-y-2 xl:col-span-2 lg:hidden">
+      <div className="mt-6 grid gap-4 max-lg:mt-0 xl:grid-cols-2">
+        <div className="space-y-2 lg:hidden xl:col-span-2">
           <Label>Type</Label>
           <div className="flex rounded-[20px] bg-[#0d1411] p-1.5">
             {(['EXPENSE', 'INCOME'] as const).map((item) => {
@@ -464,7 +491,10 @@ export default function PlannedItemsPage() {
                   key={item}
                   type="button"
                   onClick={async () => {
-                    setValue('type', item, { shouldDirty: true, shouldTouch: true })
+                    setValue('type', item, {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    })
                     await trigger(['type', 'accountId'])
                   }}
                   className={cn(
@@ -500,19 +530,13 @@ export default function PlannedItemsPage() {
 
         <div className="space-y-2">
           <Label htmlFor="planned-date">
-            {type === 'INCOME'
-              ? 'First payout date'
-              : 'First due date'}
+            {type === 'INCOME' ? 'First payout date' : 'First due date'}
           </Label>
           <Controller
             name="startDate"
             control={control}
             render={({ field }) => (
-              <Input
-                id="planned-date"
-                type="date"
-                {...field}
-              />
+              <Input id="planned-date" type="date" {...field} />
             )}
           />
           <FormErrorMessage message={errors.startDate?.message} />
@@ -587,9 +611,7 @@ export default function PlannedItemsPage() {
           </select>
           {selectedAccount ? (
             <p className="text-[12px] font-medium text-[#7f8c86]">
-              {type === 'INCOME'
-                ? 'Will land in'
-                : 'Planned against'}{' '}
+              {type === 'INCOME' ? 'Will land in' : 'Planned against'}{' '}
               {selectedAccount.name}.
             </p>
           ) : null}
@@ -602,10 +624,14 @@ export default function PlannedItemsPage() {
             id="planned-recurrence"
             value={recurrence}
             onChange={async (event) => {
-              setValue('recurrence', event.target.value as RecurrenceFrequency, {
-                shouldDirty: true,
-                shouldTouch: true,
-              })
+              setValue(
+                'recurrence',
+                event.target.value as RecurrenceFrequency,
+                {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                }
+              )
               await trigger(['firstSemiMonthlyDay', 'secondSemiMonthlyDay'])
             }}
             className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
@@ -652,7 +678,9 @@ export default function PlannedItemsPage() {
                   />
                 )}
               />
-              <FormErrorMessage message={errors.secondSemiMonthlyDay?.message} />
+              <FormErrorMessage
+                message={errors.secondSemiMonthlyDay?.message}
+              />
             </div>
           </>
         ) : null}
@@ -666,18 +694,18 @@ export default function PlannedItemsPage() {
           {title?.trim() || 'Your recurring item'}
         </p>
         <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
-          {amount
-            ? formatCurrency(Number(amount) || 0)
-            : '₱0.00'}{' '}
-          •{' '}
-          {RECURRENCE_OPTIONS.find(
-            (option) => option.value === recurrence
-          )?.label ?? 'Every month'}
+          {amount ? formatCurrency(Number(amount) || 0) : '₱0.00'} •{' '}
+          {RECURRENCE_OPTIONS.find((option) => option.value === recurrence)
+            ?.label ?? 'Every month'}
         </p>
       </div>
 
       <div className="mt-6 flex gap-3">
-        <Button type="submit" className="flex-1" disabled={createPlannedItemMutation.isPending}>
+        <Button
+          type="submit"
+          className="flex-1"
+          disabled={createPlannedItemMutation.isPending}
+        >
           {createPlannedItemMutation.isPending
             ? 'Saving...'
             : 'Add planned item'}
@@ -693,9 +721,9 @@ export default function PlannedItemsPage() {
     <>
       <DashboardHeaderShell>
         <AppPageHeader
-          eyebrow="Recurring manager"
-          title="Planned Items"
-          subtitle="Create and manage recurring bills and income from the web dashboard."
+          eyebrow="Schedule"
+          title="Recurring"
+          subtitle="Manage recurring bills and income in one place."
           inverted
         />
       </DashboardHeaderShell>
@@ -717,12 +745,14 @@ export default function PlannedItemsPage() {
               className="lg:self-stretch"
             >
               <Plus className="size-4" />
-              {showComposer ? 'Close composer' : 'New recurring item'}
+              {showComposer ? 'Close composer' : 'Add recurring item'}
             </Button>
           </div>
         </div>
 
-        {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}
+        {showComposer ? (
+          <div className="hidden lg:block">{composerContent}</div>
+        ) : null}
 
         <div className="space-y-6">
           {renderPlannedItemGroup(
@@ -730,9 +760,9 @@ export default function PlannedItemsPage() {
             expenseItems,
             {
               icon: Calendar,
-              title: 'No recurring expenses yet',
+              title: 'No recurring item',
               description:
-                'Add your first bill so the planning side of Penni starts to feel real.',
+                "You haven't scheduled any recurring income or expenses yet.",
             },
             'bg-[#241719] text-[#ff8a94]'
           )}

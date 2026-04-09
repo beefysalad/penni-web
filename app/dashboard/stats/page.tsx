@@ -59,17 +59,13 @@ export default function StatsPage() {
     [transactions, categories, selectedPeriod]
   )
 
-  const monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(
-    new Date(selectedPeriod.year, selectedPeriod.month, 1)
-  )
-
   return (
     <>
       <DashboardHeaderShell>
         <AppPageHeader
           eyebrow="Monthly trends"
           title="Statistics"
-          subtitle={`Understand your money movement for ${monthName}. Review categories and drift.`}
+          subtitle="See how your money is moving with quick summaries and category breakdowns."
           inverted
         />
       </DashboardHeaderShell>
