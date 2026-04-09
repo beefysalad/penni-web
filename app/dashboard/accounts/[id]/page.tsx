@@ -109,6 +109,7 @@ export default function AccountDetailPage() {
     () => accounts.find((entry) => entry.id === accountId) ?? null,
     [accounts, accountId]
   )
+  const isCreditCard = account?.type === 'CREDIT_CARD'
 
   const accountTransactions = useMemo(
     () => allTransactions.filter((transaction) => transaction.accountId === accountId),
@@ -160,6 +161,22 @@ export default function AccountDetailPage() {
     [cashFlowTransactions, openingBalance]
   )
 
+  const creditCardPayments = useMemo(
+    () =>
+      cashFlowTransactions
+        .filter((transaction) => transaction.type === 'INCOME')
+        .reduce((sum, transaction) => sum + Number(transaction.amount), 0),
+    [cashFlowTransactions]
+  )
+
+  const creditCardCharges = useMemo(
+    () =>
+      cashFlowTransactions
+        .filter((transaction) => transaction.type === 'EXPENSE')
+        .reduce((sum, transaction) => sum + Number(transaction.amount), 0),
+    [cashFlowTransactions]
+  )
+
   const transferMoves = useMemo(
     () =>
       accountTransactions
@@ -207,16 +224,24 @@ export default function AccountDetailPage() {
         {!isLoading && account ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatsTile
-              label="Money in"
-              value={formatCurrency(moneyIn, account.currency)}
-              hint="Includes opening balance and posted income."
+              label={isCreditCard ? 'Payments' : 'Money in'}
+              value={formatCurrency(isCreditCard ? creditCardPayments : moneyIn, account.currency)}
+              hint={
+                isCreditCard
+                  ? 'Credits and payments posted to this card so far.'
+                  : 'Includes opening balance and posted income.'
+              }
               tone="positive"
               icon={ArrowUpRight}
             />
             <StatsTile
-              label="Money out"
-              value={formatCurrency(moneyOut, account.currency)}
-              hint="Expenses posted from this account so far."
+              label={isCreditCard ? 'Charges' : 'Money out'}
+              value={formatCurrency(isCreditCard ? creditCardCharges : moneyOut, account.currency)}
+              hint={
+                isCreditCard
+                  ? 'Card spend posted to this account so far.'
+                  : 'Expenses posted from this account so far.'
+              }
               tone="negative"
               icon={ArrowDownLeft}
             />
