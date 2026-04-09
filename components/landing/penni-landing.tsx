@@ -213,7 +213,7 @@ export function PenniLanding() {
         <div className="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-2">
           <FadeIn>
             <div className="border-primary/20 bg-primary/5 text-primary inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold tracking-widest uppercase shadow-[0_0_15px_rgba(139,255,98,0.1)]">
-              Penni Overview
+              Dashboard
             </div>
 
             <h1 className="premium-header mt-6 text-white">
@@ -240,7 +240,11 @@ export function PenniLanding() {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={() => document.getElementById('accounts')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() =>
+                  document
+                    .getElementById('accounts')
+                    ?.scrollIntoView({ behavior: 'smooth' })
+                }
                 className="h-14 border-white/10 px-8 text-base font-bold backdrop-blur-sm transition-all hover:bg-white/5"
               >
                 How it works

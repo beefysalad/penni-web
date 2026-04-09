@@ -26,8 +26,6 @@ import type { Budget } from '@/lib/finance.types'
 import { formatCurrency, formatCompactDate } from '@/lib/formatters'
 import { Goal, Pencil, Plus, Trash2 } from 'lucide-react'
 
-// ─── Types & constants ─────────────────────────────────────────────────────────
-
 type BudgetForm = {
   name: string
   amount: string
@@ -40,8 +38,12 @@ type BudgetForm = {
 type BudgetTimingStatus = 'CURRENT' | 'UPCOMING' | 'PAST'
 
 const now = new Date()
-const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  .toISOString()
+  .slice(0, 10)
+const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  .toISOString()
+  .slice(0, 10)
 
 const DEFAULT_FORM: BudgetForm = {
   name: '',
@@ -69,7 +71,8 @@ const budgetFormSchema = z
       .trim()
       .min(1, 'Enter an alert threshold.')
       .refine(
-        (v) => Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 100,
+        (v) =>
+          Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 100,
         'Alert threshold must be between 1 and 100.'
       ),
     periodStart: z.string().min(1, 'Choose a start date.'),
@@ -89,7 +92,9 @@ const budgetFormSchema = z
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function toIsoDate(dateValue: string, endOfDay = false) {
-  return new Date(`${dateValue}T${endOfDay ? '23:59:59' : '00:00:00'}`).toISOString()
+  return new Date(
+    `${dateValue}T${endOfDay ? '23:59:59' : '00:00:00'}`
+  ).toISOString()
 }
 
 function mapBudgetToForm(budget: Budget): BudgetForm {
@@ -103,7 +108,10 @@ function mapBudgetToForm(budget: Budget): BudgetForm {
   }
 }
 
-function getBudgetTimingStatus(budget: Budget, today: Date): BudgetTimingStatus {
+function getBudgetTimingStatus(
+  budget: Budget,
+  today: Date
+): BudgetTimingStatus {
   const start = new Date(budget.periodStart)
   const end = new Date(budget.periodEnd)
   if (today < start) return 'UPCOMING'
@@ -111,7 +119,11 @@ function getBudgetTimingStatus(budget: Budget, today: Date): BudgetTimingStatus 
   return 'CURRENT'
 }
 
-function getProgressState(spent: number, limit: number, alertThreshold: number) {
+function getProgressState(
+  spent: number,
+  limit: number,
+  alertThreshold: number
+) {
   const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
   const isOver = spent > limit
   const isReached = !isOver && limit > 0 && spent >= limit
@@ -119,9 +131,23 @@ function getProgressState(spent: number, limit: number, alertThreshold: number) 
   return {
     pct,
     isOver,
-    label: isOver ? 'Over budget' : isReached ? 'Budget reached' : isWarning ? 'Approaching' : 'On track',
-    labelColor: isOver ? '#ff8a94' : isReached || isWarning ? '#ffc857' : '#4a5650',
-    barColor: isOver ? '#ff8a94' : isReached || isWarning ? '#ffc857' : '#8bff62',
+    label: isOver
+      ? 'Over budget'
+      : isReached
+        ? 'Budget reached'
+        : isWarning
+          ? 'Approaching'
+          : 'On track',
+    labelColor: isOver
+      ? '#ff8a94'
+      : isReached || isWarning
+        ? '#ffc857'
+        : '#4a5650',
+    barColor: isOver
+      ? '#ff8a94'
+      : isReached || isWarning
+        ? '#ffc857'
+        : '#8bff62',
   }
 }
 
@@ -142,7 +168,11 @@ function BudgetRow({
 }) {
   const limit = Number(budget.amount)
   const remaining = limit - spent
-  const { pct, label, labelColor, barColor } = getProgressState(spent, limit, budget.alertThreshold)
+  const { pct, label, labelColor, barColor } = getProgressState(
+    spent,
+    limit,
+    budget.alertThreshold
+  )
 
   return (
     <div className="flex flex-col gap-3 rounded-[20px] border border-[#17211c] bg-[#0f1512] p-4">
@@ -153,8 +183,11 @@ function BudgetRow({
             {budget.name || categoryName || 'Unnamed budget'}
           </p>
           <p className="mt-0.5 text-[11px] font-medium text-[#4a5650]">
-            {formatCompactDate(budget.periodStart)} → {formatCompactDate(budget.periodEnd)}
-            {categoryName ? <span className="ml-2 text-[#41d6b2]">{categoryName}</span> : null}
+            {formatCompactDate(budget.periodStart)} →{' '}
+            {formatCompactDate(budget.periodEnd)}
+            {categoryName ? (
+              <span className="ml-2 text-[#41d6b2]">{categoryName}</span>
+            ) : null}
           </p>
         </div>
 
@@ -188,8 +221,12 @@ function BudgetRow({
 
       {/* Bottom row */}
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[12px] font-semibold" style={{ color: remaining < 0 ? '#ff8a94' : '#93a19a' }}>
-          {remaining < 0 ? 'Over ' : ''}{formatCurrency(Math.abs(remaining), budget.currency)} left
+        <p
+          className="text-[12px] font-semibold"
+          style={{ color: remaining < 0 ? '#ff8a94' : '#93a19a' }}
+        >
+          {remaining < 0 ? 'Over ' : ''}
+          {formatCurrency(Math.abs(remaining), budget.currency)} left
           <span className="ml-1.5 font-normal text-[#4a5650]">
             of {formatCurrency(limit, budget.currency)}
           </span>
@@ -218,9 +255,11 @@ function BudgetSection({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between px-0.5">
-        <h3 className="text-[13px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">{title}</h3>
+        <h3 className="text-[13px] font-bold tracking-[1.8px] text-[#4a5650] uppercase">
+          {title}
+        </h3>
         <span
-          className="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+          className="rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase"
           style={{ color: badgeColor, backgroundColor: `${badgeColor}15` }}
         >
           {badge}
@@ -270,27 +309,40 @@ export default function BudgetsPage() {
   }, [categories])
 
   const sortedBudgets = useMemo(() => {
-    const order: Record<BudgetTimingStatus, number> = { CURRENT: 0, UPCOMING: 1, PAST: 2 }
+    const order: Record<BudgetTimingStatus, number> = {
+      CURRENT: 0,
+      UPCOMING: 1,
+      PAST: 2,
+    }
     return [...budgets].sort((a, b) => {
       const as = getBudgetTimingStatus(a, today)
       const bs = getBudgetTimingStatus(b, today)
       if (as !== bs) return order[as] - order[bs]
       if (as === 'PAST')
         return new Date(b.periodEnd).getTime() - new Date(a.periodEnd).getTime()
-      return new Date(a.periodStart).getTime() - new Date(b.periodStart).getTime()
+      return (
+        new Date(a.periodStart).getTime() - new Date(b.periodStart).getTime()
+      )
     })
   }, [budgets, today])
 
   const currentBudgets = useMemo(
-    () => sortedBudgets.filter((b) => getBudgetTimingStatus(b, today) === 'CURRENT'),
+    () =>
+      sortedBudgets.filter(
+        (b) => getBudgetTimingStatus(b, today) === 'CURRENT'
+      ),
     [sortedBudgets, today]
   )
   const upcomingBudgets = useMemo(
-    () => sortedBudgets.filter((b) => getBudgetTimingStatus(b, today) === 'UPCOMING'),
+    () =>
+      sortedBudgets.filter(
+        (b) => getBudgetTimingStatus(b, today) === 'UPCOMING'
+      ),
     [sortedBudgets, today]
   )
   const pastBudgets = useMemo(
-    () => sortedBudgets.filter((b) => getBudgetTimingStatus(b, today) === 'PAST'),
+    () =>
+      sortedBudgets.filter((b) => getBudgetTimingStatus(b, today) === 'PAST'),
     [sortedBudgets, today]
   )
 
@@ -315,16 +367,28 @@ export default function BudgetsPage() {
       updateBudgetMutation.mutate(
         { id: editingBudgetId, input: payload },
         {
-          onSuccess: () => { toast.success('Budget updated.'); resetForm() },
-          onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not update budget.'),
+          onSuccess: () => {
+            toast.success('Budget updated.')
+            resetForm()
+          },
+          onError: (e) =>
+            toast.error(
+              e instanceof Error ? e.message : 'Could not update budget.'
+            ),
         }
       )
       return
     }
 
     createBudgetMutation.mutate(payload, {
-      onSuccess: () => { toast.success('Budget created.'); resetForm() },
-      onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not create budget.'),
+      onSuccess: () => {
+        toast.success('Budget created.')
+        resetForm()
+      },
+      onError: (e) =>
+        toast.error(
+          e instanceof Error ? e.message : 'Could not create budget.'
+        ),
     })
   }
 
@@ -337,7 +401,7 @@ export default function BudgetsPage() {
     >
       <div className="hidden items-start justify-between gap-4 lg:flex">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[2px] text-[#4a5650]">
+          <p className="text-[10px] font-bold tracking-[2px] text-[#4a5650] uppercase">
             {editingBudgetId ? 'Editing budget' : 'New budget'}
           </p>
           <h2 className="mt-1.5 text-[20px] font-bold tracking-tight text-[#f4f7f5]">
@@ -349,47 +413,101 @@ export default function BudgetsPage() {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:mt-5 max-lg:mt-0">
+      <div className="mt-5 grid gap-4 max-lg:mt-0 sm:grid-cols-2 lg:mt-5">
         <div className="space-y-1.5">
-          <Label htmlFor="budget-name" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Budget name</Label>
-          <Input id="budget-name" {...register('name')} placeholder="Food, Shopping, Bills…" />
+          <Label
+            htmlFor="budget-name"
+            className="text-[10px] tracking-widest text-[#4a5650] uppercase"
+          >
+            Budget name
+          </Label>
+          <Input
+            id="budget-name"
+            {...register('name')}
+            placeholder="Food, Shopping, Bills…"
+          />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="budget-category" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Category</Label>
+          <Label
+            htmlFor="budget-category"
+            className="text-[10px] tracking-widest text-[#4a5650] uppercase"
+          >
+            Category
+          </Label>
           <select
             id="budget-category"
             value={categoryId}
-            onChange={(e) => setValue('categoryId', e.target.value, { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
-            className="h-11 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[14px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31]"
+            onChange={(e) =>
+              setValue('categoryId', e.target.value, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              })
+            }
+            className="h-11 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[14px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31]"
           >
             <option value="">Optional category</option>
             {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
             ))}
           </select>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="budget-amount" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Amount</Label>
-          <Input id="budget-amount" type="number" {...register('amount')} placeholder="5000.00" />
+          <Label
+            htmlFor="budget-amount"
+            className="text-[10px] tracking-widest text-[#4a5650] uppercase"
+          >
+            Amount
+          </Label>
+          <Input
+            id="budget-amount"
+            type="number"
+            {...register('amount')}
+            placeholder="5000.00"
+          />
           <FormErrorMessage message={errors.amount?.message} />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="budget-alert" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Alert threshold (%)</Label>
-          <Input id="budget-alert" type="number" min="1" max="100" {...register('alertThreshold')} placeholder="80" />
+          <Label
+            htmlFor="budget-alert"
+            className="text-[10px] tracking-widest text-[#4a5650] uppercase"
+          >
+            Alert threshold (%)
+          </Label>
+          <Input
+            id="budget-alert"
+            type="number"
+            min="1"
+            max="100"
+            {...register('alertThreshold')}
+            placeholder="80"
+          />
           <FormErrorMessage message={errors.alertThreshold?.message} />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="budget-start" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Period start</Label>
+          <Label
+            htmlFor="budget-start"
+            className="text-[10px] tracking-widest text-[#4a5650] uppercase"
+          >
+            Period start
+          </Label>
           <Input id="budget-start" type="date" {...register('periodStart')} />
           <FormErrorMessage message={errors.periodStart?.message} />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="budget-end" className="text-[10px] tracking-widest uppercase text-[#4a5650]">Period end</Label>
+          <Label
+            htmlFor="budget-end"
+            className="text-[10px] tracking-widest text-[#4a5650] uppercase"
+          >
+            Period end
+          </Label>
           <Input id="budget-end" type="date" {...register('periodEnd')} />
           <FormErrorMessage message={errors.periodEnd?.message} />
         </div>
@@ -399,12 +517,19 @@ export default function BudgetsPage() {
         <Button
           type="submit"
           className="flex-1 rounded-full"
-          disabled={createBudgetMutation.isPending || updateBudgetMutation.isPending}
+          disabled={
+            createBudgetMutation.isPending || updateBudgetMutation.isPending
+          }
         >
           <Plus className="size-4" />
           {editingBudgetId ? 'Save changes' : 'Create budget'}
         </Button>
-        <Button type="button" variant="secondary" className="rounded-full" onClick={resetForm}>
+        <Button
+          type="button"
+          variant="secondary"
+          className="rounded-full"
+          onClick={resetForm}
+        >
           Cancel
         </Button>
       </div>
@@ -424,25 +549,36 @@ export default function BudgetsPage() {
         />
       </DashboardHeaderShell>
 
-      <div className="flex flex-col gap-5 px-4 pb-28 pt-6 md:px-6 lg:px-8">
-
+      <div className="flex flex-col gap-5 px-4 pt-6 pb-28 md:px-6 lg:px-8">
         {/* ── Stat chips + action row ── */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             {/* Current chip */}
             <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
-              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#4a5650]">Current</span>
-              <span className="text-[15px] font-bold text-[#8bff62]">{currentBudgets.length}</span>
+              <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">
+                Current
+              </span>
+              <span className="text-[15px] font-bold text-[#8bff62]">
+                {currentBudgets.length}
+              </span>
             </div>
             {/* Upcoming chip */}
             <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
-              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#4a5650]">Upcoming</span>
-              <span className="text-[15px] font-bold text-[#9dd6ff]">{upcomingBudgets.length}</span>
+              <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">
+                Upcoming
+              </span>
+              <span className="text-[15px] font-bold text-[#9dd6ff]">
+                {upcomingBudgets.length}
+              </span>
             </div>
             {/* Past chip */}
             <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
-              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#4a5650]">Past</span>
-              <span className="text-[15px] font-bold text-[#93a19a]">{pastBudgets.length}</span>
+              <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">
+                Past
+              </span>
+              <span className="text-[15px] font-bold text-[#93a19a]">
+                {pastBudgets.length}
+              </span>
             </div>
           </div>
 
@@ -464,10 +600,16 @@ export default function BudgetsPage() {
         </div>
 
         {/* ── Desktop composer ── */}
-        {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}
+        {showComposer ? (
+          <div className="hidden lg:block">{composerContent}</div>
+        ) : null}
 
         {/* ── Current budgets ── */}
-        <BudgetSection title="Current" badge={`${currentBudgets.length} active`} badgeColor="#8bff62">
+        <BudgetSection
+          title="Current"
+          badge={`${currentBudgets.length} active`}
+          badgeColor="#8bff62"
+        >
           {budgetsQuery.isLoading ? (
             <>
               <div className="h-[88px] animate-pulse rounded-[20px] bg-[#131b17]" />
@@ -487,8 +629,12 @@ export default function BudgetsPage() {
                 }}
                 onDelete={() =>
                   deleteBudgetMutation.mutate(budget.id, {
-                    onSuccess: () => toast.success(`${budget.name || 'Budget'} deleted.`),
-                    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not delete.'),
+                    onSuccess: () =>
+                      toast.success(`${budget.name || 'Budget'} deleted.`),
+                    onError: (e) =>
+                      toast.error(
+                        e instanceof Error ? e.message : 'Could not delete.'
+                      ),
                   })
                 }
               />
@@ -508,7 +654,11 @@ export default function BudgetsPage() {
 
         {/* ── Upcoming budgets ── */}
         {!budgetsQuery.isLoading && upcomingBudgets.length > 0 ? (
-          <BudgetSection title="Upcoming" badge={`${upcomingBudgets.length} scheduled`} badgeColor="#9dd6ff">
+          <BudgetSection
+            title="Upcoming"
+            badge={`${upcomingBudgets.length} scheduled`}
+            badgeColor="#9dd6ff"
+          >
             {upcomingBudgets.map((budget) => (
               <BudgetRow
                 key={budget.id}
@@ -522,8 +672,12 @@ export default function BudgetsPage() {
                 }}
                 onDelete={() =>
                   deleteBudgetMutation.mutate(budget.id, {
-                    onSuccess: () => toast.success(`${budget.name || 'Budget'} deleted.`),
-                    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not delete.'),
+                    onSuccess: () =>
+                      toast.success(`${budget.name || 'Budget'} deleted.`),
+                    onError: (e) =>
+                      toast.error(
+                        e instanceof Error ? e.message : 'Could not delete.'
+                      ),
                   })
                 }
               />
@@ -533,7 +687,11 @@ export default function BudgetsPage() {
 
         {/* ── Past budgets ── */}
         {!budgetsQuery.isLoading && pastBudgets.length > 0 ? (
-          <BudgetSection title="Past" badge={`${pastBudgets.length} archived`} badgeColor="#93a19a">
+          <BudgetSection
+            title="Past"
+            badge={`${pastBudgets.length} archived`}
+            badgeColor="#93a19a"
+          >
             {pastBudgets.map((budget) => (
               <BudgetRow
                 key={budget.id}
@@ -547,8 +705,12 @@ export default function BudgetsPage() {
                 }}
                 onDelete={() =>
                   deleteBudgetMutation.mutate(budget.id, {
-                    onSuccess: () => toast.success(`${budget.name || 'Budget'} deleted.`),
-                    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not delete.'),
+                    onSuccess: () =>
+                      toast.success(`${budget.name || 'Budget'} deleted.`),
+                    onError: (e) =>
+                      toast.error(
+                        e instanceof Error ? e.message : 'Could not delete.'
+                      ),
                   })
                 }
               />
