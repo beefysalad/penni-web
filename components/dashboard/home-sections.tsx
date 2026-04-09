@@ -241,8 +241,8 @@ export function RecentTransactionsSection({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center rounded-[24px] bg-[#131b17] px-6 py-10 text-center">
-            <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-[#1a2620]">
-              <ReceiptText className="size-7 text-[#1b2a21]" />
+            <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-[#213227] bg-[#16211b] shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+              <ReceiptText className="size-7 text-[#8bff62]" strokeWidth={2.2} />
             </div>
             <p className="text-[14px] font-medium text-[#7f8c86]">
               No transactions yet. Log your first expense to start.
@@ -375,8 +375,8 @@ export function UpcomingSection({
           </>
         ) : (
           <div className="flex flex-col items-center justify-center rounded-[24px] bg-[#131b17] px-6 py-10 text-center">
-            <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-[#1a2620]">
-              <Calendar className="size-7 text-[#1b2a21]" />
+            <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-[#213227] bg-[#16211b] shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+              <Calendar className="size-7 text-[#41d6b2]" strokeWidth={2.2} />
             </div>
             <p className="text-[14px] leading-relaxed font-medium text-[#7f8c86]">
               No planned items yet. Use Plan ahead to add recurring bills or

@@ -653,8 +653,8 @@ export default function ActivityPage() {
             ))
           ) : (
             <div className="flex flex-col items-center justify-center rounded-[30px] bg-[#0f1512] py-20 px-6 text-center border border-[#17211c]">
-              <div className="flex size-16 items-center justify-center rounded-full bg-[#18221d] mb-5">
-                <ReceiptText className="size-8 text-[#1b2a21]" />
+              <div className="flex size-16 items-center justify-center rounded-full border border-[#213227] bg-[#16211b] shadow-[0_10px_30px_rgba(0,0,0,0.18)] mb-5">
+                <ReceiptText className="size-8 text-[#8bff62]" strokeWidth={2.2} />
               </div>
               <h4 className="text-[18px] font-bold text-[#f4f7f5]">No history found</h4>
               <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86] max-w-[240px]">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
 import { 
@@ -30,18 +30,18 @@ export default function StatsPage() {
   const currentMonthValue = `${currentPeriod.year}-${String(currentPeriod.month + 1).padStart(2, '0')}`
   const [selectedMonth, setSelectedMonth] = useState(currentMonthValue)
 
-  useEffect(() => {
-    const hasSelectedMonth = monthOptions.some((option) => option.value === selectedMonth)
-    if (hasSelectedMonth || monthOptions.length === 0) return
-    setSelectedMonth(currentMonthValue)
+  const effectiveMonth = useMemo(() => {
+    if (monthOptions.length === 0) return selectedMonth
+    const exists = monthOptions.some((option) => option.value === selectedMonth)
+    return exists ? selectedMonth : currentMonthValue
   }, [currentMonthValue, monthOptions, selectedMonth])
 
   const selectedPeriod = useMemo(() => {
-    const selectedOption = monthOptions.find((option) => option.value === selectedMonth)
+    const selectedOption = monthOptions.find((option) => option.value === effectiveMonth)
     return selectedOption
       ? { year: selectedOption.year, month: selectedOption.month }
       : currentPeriod
-  }, [currentPeriod, monthOptions, selectedMonth])
+  }, [currentPeriod, monthOptions, effectiveMonth])
 
   const stats = useMemo(
     () => buildMonthlyExpenseDistribution(transactions, categories, selectedPeriod),
@@ -74,7 +74,7 @@ export default function StatsPage() {
             </div>
 
             <select
-              value={selectedMonth}
+              value={effectiveMonth}
               onChange={(event) => setSelectedMonth(event.target.value)}
               className="h-12 min-w-[220px] rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
             >
@@ -202,8 +202,8 @@ export default function StatsPage() {
               ))
             ) : (
               <div className="flex flex-col items-center justify-center rounded-[30px] bg-[#0f1512] py-16 px-6 text-center border border-[#17211c]">
-                <div className="flex size-16 items-center justify-center rounded-full bg-[#18221d] mb-5">
-                  <PieChart className="size-8 text-[#1b2a21]" />
+                <div className="flex size-16 items-center justify-center rounded-full border border-[#213227] bg-[#16211b] shadow-[0_10px_30px_rgba(0,0,0,0.18)] mb-5">
+                  <PieChart className="size-8 text-[#ffc857]" strokeWidth={2.2} />
                 </div>
                 <h4 className="text-[18px] font-bold text-[#f4f7f5]">No data yet</h4>
                 <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86] max-w-[240px]">

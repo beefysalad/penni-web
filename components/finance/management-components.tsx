@@ -26,8 +26,8 @@ export function FinanceEmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-[28px] border border-[#17211c] bg-[#101713] px-6 py-12 text-center">
-      <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-[#18221d]">
-        <Icon className="size-7 text-[#32453a]" />
+      <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-[#213227] bg-[#16211b] shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+        <Icon className="size-7 text-[#8bff62]" strokeWidth={2.2} />
       </div>
       <h3 className="text-[18px] font-bold tracking-tight text-[#f4f7f5]">{title}</h3>
       <p className="mt-2 max-w-[260px] text-[14px] font-medium leading-relaxed text-[#7f8c86]">

@@ -592,8 +592,8 @@ export default function AccountsPage() {
               ))
             ) : (
               <div className="flex flex-col items-center justify-center rounded-[30px] border border-[#17211c] bg-[#0f1512] px-6 py-20 text-center">
-                <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-[#18221d]">
-                  <WalletCards className="size-8 text-[#1b2a21]" />
+                <div className="mb-5 flex size-16 items-center justify-center rounded-full border border-[#213227] bg-[#16211b] shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+                  <WalletCards className="size-8 text-[#8bff62]" strokeWidth={2.2} />
                 </div>
                 <h4 className="text-[18px] font-bold text-[#f4f7f5]">
                   No accounts found
