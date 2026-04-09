@@ -6,7 +6,11 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
-import { AccountCard, AccountSkeletonCard, NetWorthCard } from '@/components/finance/finance-components'
+import {
+  AccountCard,
+  AccountSkeletonCard,
+  NetWorthCard,
+} from '@/components/finance/finance-components'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Pill } from '@/components/ui/pill'
@@ -27,7 +31,13 @@ import {
   ACCOUNT_TYPE_OPTIONS,
   type AccountFilter,
 } from '@/lib/constants'
-import type { Account, AccountType } from '@/lib/finance.types'
+import {
+  getAccountAvailableCredit,
+  getAccountCreditLimit,
+  getAccountDueDayOfMonth,
+  type Account,
+  type AccountType,
+} from '@/lib/finance.types'
 import { Pencil, Plus, Trash2, WalletCards } from 'lucide-react'
 
 type AccountForm = {
@@ -39,6 +49,7 @@ type AccountForm = {
   creditLimit: string
   availableCredit: string
   dueDayOfMonth: string
+  statementDayOfMonth: string
 }
 
 const DEFAULT_FORM: AccountForm = {
@@ -50,6 +61,7 @@ const DEFAULT_FORM: AccountForm = {
   creditLimit: '',
   availableCredit: '',
   dueDayOfMonth: '',
+  statementDayOfMonth: '',
 }
 
 function mapAccountToForm(account: Account): AccountForm {
@@ -59,9 +71,20 @@ function mapAccountToForm(account: Account): AccountForm {
     currency: account.currency,
     balance: String(account.balance ?? ''),
     institutionName: account.institutionName ?? '',
-    creditLimit: account.creditLimit ? String(account.creditLimit) : '',
-    availableCredit: account.availableCredit ? String(account.availableCredit) : '',
-    dueDayOfMonth: account.dueDayOfMonth ? String(account.dueDayOfMonth) : '',
+    creditLimit:
+      getAccountCreditLimit(account) !== null
+        ? String(getAccountCreditLimit(account))
+        : '',
+    availableCredit:
+      getAccountAvailableCredit(account) !== null
+        ? String(getAccountAvailableCredit(account))
+        : '',
+    dueDayOfMonth: getAccountDueDayOfMonth(account)
+      ? String(getAccountDueDayOfMonth(account))
+      : '',
+    statementDayOfMonth: account.creditCard?.statementDayOfMonth
+      ? String(account.creditCard.statementDayOfMonth)
+      : '',
   }
 }
 
@@ -125,6 +148,9 @@ export default function AccountsPage() {
     const creditLimit = Number(values.creditLimit)
     const availableCredit = Number(values.availableCredit)
     const dueDayOfMonth = Number(values.dueDayOfMonth)
+    const statementDayOfMonth = values.statementDayOfMonth
+      ? Number(values.statementDayOfMonth)
+      : null
 
     const payload = {
       name,
@@ -134,9 +160,14 @@ export default function AccountsPage() {
         ? String((creditLimit - availableCredit).toFixed(2))
         : String(balance.toFixed(2)),
       institutionName: values.institutionName.trim() || undefined,
-      creditLimit: isCreditCard ? String(creditLimit.toFixed(2)) : undefined,
-      availableCredit: isCreditCard ? String(availableCredit.toFixed(2)) : undefined,
-      dueDayOfMonth: isCreditCard ? dueDayOfMonth : undefined,
+      creditCard: isCreditCard
+        ? {
+            creditLimit: String(creditLimit.toFixed(2)),
+            availableCredit: String(availableCredit.toFixed(2)),
+            dueDayOfMonth,
+            statementDayOfMonth,
+          }
+        : undefined,
     }
 
     if (editingAccountId) {
@@ -148,7 +179,11 @@ export default function AccountsPage() {
             resetForm()
           },
           onError: (error) => {
-            toast.error(error instanceof Error ? error.message : 'Could not update account.')
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : 'Could not update account.'
+            )
           },
         }
       )
@@ -161,7 +196,9 @@ export default function AccountsPage() {
         resetForm()
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : 'Could not create account.')
+        toast.error(
+          error instanceof Error ? error.message : 'Could not create account.'
+        )
       },
     })
   }
@@ -173,13 +210,13 @@ export default function AccountsPage() {
     >
       <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
+          <p className="text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
             {editingAccountId ? 'Edit account' : 'Add account'}
           </p>
           <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
             {editingAccountId ? 'Update this wallet' : 'Create a new wallet'}
           </h2>
-          <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#7f8c86]">
+          <p className="mt-2 text-[14px] leading-relaxed font-medium text-[#7f8c86]">
             Credit cards keep their limit fields here too, like in mobile.
           </p>
         </div>
@@ -188,8 +225,8 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-2 max-lg:mt-0">
-        <div className="space-y-2 xl:col-span-2 lg:hidden">
+      <div className="mt-6 grid gap-4 max-lg:mt-0 xl:grid-cols-2">
+        <div className="space-y-2 lg:hidden xl:col-span-2">
           <Label>Type</Label>
           <div className="flex flex-wrap gap-2">
             {ACCOUNT_TYPE_OPTIONS.map((option) => {
@@ -203,7 +240,14 @@ export default function AccountsPage() {
                       shouldDirty: true,
                       shouldTouch: true,
                     })
-                    await trigger(['type', 'creditLimit', 'availableCredit', 'dueDayOfMonth', 'balance'])
+                    await trigger([
+                      'type',
+                      'creditLimit',
+                      'availableCredit',
+                      'dueDayOfMonth',
+                      'statementDayOfMonth',
+                      'balance',
+                    ])
                   }}
                   className={cn(
                     'rounded-full border px-4 py-2.5 text-[14px] font-semibold transition',
@@ -224,7 +268,8 @@ export default function AccountsPage() {
             id="account-name"
             {...register('name', {
               required: 'Account name is required.',
-              validate: (value) => value.trim().length > 0 || 'Account name is required.',
+              validate: (value) =>
+                value.trim().length > 0 || 'Account name is required.',
             })}
             placeholder="e.g. BDO Savings, GCash, Maya"
           />
@@ -243,9 +288,16 @@ export default function AccountsPage() {
                 shouldDirty: true,
                 shouldTouch: true,
               })
-              await trigger(['type', 'creditLimit', 'availableCredit', 'dueDayOfMonth', 'balance'])
+              await trigger([
+                'type',
+                'creditLimit',
+                'availableCredit',
+                'dueDayOfMonth',
+                'statementDayOfMonth',
+                'balance',
+              ])
             }}
-            className="hidden h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30 lg:block"
+            className="hidden h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30 lg:block"
           >
             {ACCOUNT_TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -266,7 +318,7 @@ export default function AccountsPage() {
                 shouldTouch: true,
               })
             }
-            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] outline-none transition focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
           >
             {ACCOUNT_CURRENCY_OPTIONS.map((currency) => (
               <option key={currency} value={currency}>
@@ -295,7 +347,8 @@ export default function AccountsPage() {
                 {...register('creditLimit', {
                   validate: (value) => {
                     if (type !== 'CREDIT_CARD') return true
-                    if (!value.trim()) return 'Credit limit is required for credit cards.'
+                    if (!value.trim())
+                      return 'Credit limit is required for credit cards.'
 
                     const parsed = Number(value)
                     return Number.isFinite(parsed) && parsed >= 0
@@ -315,7 +368,8 @@ export default function AccountsPage() {
                 {...register('availableCredit', {
                   validate: (value) => {
                     if (type !== 'CREDIT_CARD') return true
-                    if (!value.trim()) return 'Available credit is required for credit cards.'
+                    if (!value.trim())
+                      return 'Available credit is required for credit cards.'
 
                     const parsed = Number(value)
                     const limit = Number(creditLimit)
@@ -345,10 +399,13 @@ export default function AccountsPage() {
                 {...register('dueDayOfMonth', {
                   validate: (value) => {
                     if (type !== 'CREDIT_CARD') return true
-                    if (!value.trim()) return 'Due day is required for credit cards.'
+                    if (!value.trim())
+                      return 'Due day is required for credit cards.'
 
                     const parsed = Number(value)
-                    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 31
+                    return Number.isInteger(parsed) &&
+                      parsed >= 1 &&
+                      parsed <= 31
                       ? true
                       : 'Due day must be between 1 and 31.'
                   },
@@ -356,6 +413,30 @@ export default function AccountsPage() {
                 placeholder="16"
               />
               <FormErrorMessage message={errors.dueDayOfMonth?.message} />
+            </div>
+            <div className="space-y-2 xl:col-span-2">
+              <Label htmlFor="account-statement-day">Statement day</Label>
+              <Input
+                id="account-statement-day"
+                type="number"
+                min="1"
+                max="31"
+                {...register('statementDayOfMonth', {
+                  validate: (value) => {
+                    if (type !== 'CREDIT_CARD') return true
+                    if (!value.trim()) return true
+
+                    const parsed = Number(value)
+                    return Number.isInteger(parsed) &&
+                      parsed >= 1 &&
+                      parsed <= 31
+                      ? true
+                      : 'Statement day must be between 1 and 31.'
+                  },
+                })}
+                placeholder="24"
+              />
+              <FormErrorMessage message={errors.statementDayOfMonth?.message} />
             </div>
           </>
         ) : (
@@ -381,7 +462,9 @@ export default function AccountsPage() {
         <Button
           type="submit"
           className="flex-1"
-          disabled={createAccountMutation.isPending || updateAccountMutation.isPending}
+          disabled={
+            createAccountMutation.isPending || updateAccountMutation.isPending
+          }
         >
           {editingAccountId ? 'Save changes' : 'Add account'}
         </Button>
@@ -403,36 +486,49 @@ export default function AccountsPage() {
         />
       </DashboardHeaderShell>
 
-      <div className="flex flex-col gap-6 px-4 pt-6 pb-20 md:px-6 lg:px-8 animate-in fade-in duration-500">
+      <div className="animate-in fade-in flex flex-col gap-6 px-4 pt-6 pb-20 duration-500 md:px-6 lg:px-8">
         {accountsQuery.isLoading ? (
-          <div className="h-40 w-full rounded-[30px] bg-[#111916] animate-pulse" />
+          <div className="h-40 w-full animate-pulse rounded-[30px] bg-[#111916]" />
         ) : (
-          <NetWorthCard totalBalance={totalBalance} typeBreakdown={typeBreakdown} />
+          <NetWorthCard
+            totalBalance={totalBalance}
+            typeBreakdown={typeBreakdown}
+          />
         )}
 
         <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-[12px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">
+              <p className="text-[12px] font-bold tracking-[1.8px] text-[#4a5650] uppercase">
                 Wallet manager
               </p>
               <p className="mt-1 text-[14px] font-medium text-[#93a19a]">
-                Keep the page focused on your accounts. Open the composer only when you need it.
+                Keep the page focused on your accounts. Open the composer only
+                when you need it.
               </p>
             </div>
-            <Button onClick={() => setShowComposer((current) => !current)} className="lg:self-stretch">
+            <Button
+              onClick={() => setShowComposer((current) => !current)}
+              className="lg:self-stretch"
+            >
               <Plus className="size-4" />
               {showComposer ? 'Close composer' : 'New account'}
             </Button>
           </div>
         </div>
 
-        {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}
+        {showComposer ? (
+          <div className="hidden lg:block">{composerContent}</div>
+        ) : null}
 
         <div className="flex flex-col gap-4">
-          <div className="flex flex-row items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <div className="no-scrollbar flex flex-row items-center gap-2 overflow-x-auto pb-1">
             {ACCOUNT_FILTERS.map((filter) => (
-              <button key={filter} onClick={() => setActiveFilter(filter as AccountFilter)} className="focus:outline-none">
+              <button
+                key={filter}
+                onClick={() => setActiveFilter(filter as AccountFilter)}
+                className="focus:outline-none"
+              >
                 <Pill
                   label={filter}
                   variant={activeFilter === filter ? 'selected' : 'default'}
@@ -454,7 +550,9 @@ export default function AccountsPage() {
                 <AccountCard
                   key={account.id}
                   account={account}
-                  onClick={() => router.push(`/dashboard/accounts/${account.id}`)}
+                  onClick={() =>
+                    router.push(`/dashboard/accounts/${account.id}`)
+                  }
                   action={
                     <div className="flex items-center gap-2">
                       <button
@@ -473,9 +571,14 @@ export default function AccountsPage() {
                         onClick={(event) => {
                           event.stopPropagation()
                           deleteAccountMutation.mutate(account.id, {
-                            onSuccess: () => toast.success(`${account.name} deleted.`),
+                            onSuccess: () =>
+                              toast.success(`${account.name} deleted.`),
                             onError: (error) =>
-                              toast.error(error instanceof Error ? error.message : 'Could not delete account.'),
+                              toast.error(
+                                error instanceof Error
+                                  ? error.message
+                                  : 'Could not delete account.'
+                              ),
                           })
                         }}
                         className="flex size-9 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
@@ -488,12 +591,14 @@ export default function AccountsPage() {
                 />
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center rounded-[30px] bg-[#0f1512] py-20 px-6 text-center border border-[#17211c]">
+              <div className="flex flex-col items-center justify-center rounded-[30px] border border-[#17211c] bg-[#0f1512] px-6 py-20 text-center">
                 <div className="mb-5 flex size-16 items-center justify-center rounded-full bg-[#18221d]">
                   <WalletCards className="size-8 text-[#1b2a21]" />
                 </div>
-                <h4 className="text-[18px] font-bold text-[#f4f7f5]">No accounts found</h4>
-                <p className="mt-2 max-w-[240px] text-[14px] font-medium leading-relaxed text-[#7f8c86]">
+                <h4 className="text-[18px] font-bold text-[#f4f7f5]">
+                  No accounts found
+                </h4>
+                <p className="mt-2 max-w-[240px] text-[14px] leading-relaxed font-medium text-[#7f8c86]">
                   {activeFilter === 'All'
                     ? "You haven't added any accounts yet."
                     : `No ${activeFilter.toLowerCase()} accounts found.`}

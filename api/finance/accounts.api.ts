@@ -1,5 +1,7 @@
 import api from '@/lib/axios'
-import type { Account, AccountType } from '@/lib/finance.types'
+import type { Account, AccountType, CreditCardDetails } from '@/lib/finance.types'
+
+export type CreditCardAccountInput = Pick<CreditCardDetails, 'creditLimit' | 'availableCredit' | 'dueDayOfMonth' | 'statementDayOfMonth'>
 
 export type CreateAccountInput = {
   name: string
@@ -7,9 +9,7 @@ export type CreateAccountInput = {
   currency: string
   balance: string
   institutionName?: string
-  creditLimit?: string
-  availableCredit?: string
-  dueDayOfMonth?: number
+  creditCard?: CreditCardAccountInput
 }
 
 export type UpdateAccountInput = Partial<CreateAccountInput>

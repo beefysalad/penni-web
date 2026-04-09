@@ -13,7 +13,14 @@ import {
   TrendingUp
 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import type { Account, Transaction } from '@/lib/finance.types'
+import {
+  getAccountAvailableCredit,
+  getAccountCreditLimit,
+  getAccountDueDayOfMonth,
+  getAccountStatementDayOfMonth,
+  type Account,
+  type Transaction,
+} from '@/lib/finance.types'
 
 // --- Account Card ---
 
@@ -29,9 +36,10 @@ export function AccountCard({
   const meta = ACCOUNT_TYPE_META[account.type]
   const TypeIcon = meta.icon
   const isCreditCard = account.type === 'CREDIT_CARD'
-  const availableCredit = account.availableCredit ? Number(account.availableCredit) : null
-  const creditLimit = account.creditLimit ? Number(account.creditLimit) : null
-  const dueDayLabel = formatDueDayOfMonth(account.dueDayOfMonth)
+  const availableCredit = getAccountAvailableCredit(account)
+  const creditLimit = getAccountCreditLimit(account)
+  const dueDayLabel = formatDueDayOfMonth(getAccountDueDayOfMonth(account))
+  const statementDayLabel = formatDueDayOfMonth(getAccountStatementDayOfMonth(account))
   const usedCredit =
     creditLimit !== null && availableCredit !== null
       ? Math.max(0, creditLimit - availableCredit)
@@ -109,7 +117,7 @@ export function AccountCard({
         </div>
       </div>
 
-      {isCreditCard && (availableCredit !== null || creditLimit !== null || dueDayLabel) && (
+      {isCreditCard && (availableCredit !== null || creditLimit !== null || dueDayLabel || statementDayLabel) && (
         <div className="mt-4 border-t border-[#1b2a21]/30 pt-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-3 sm:flex sm:flex-row sm:items-center sm:gap-5">
@@ -144,14 +152,24 @@ export function AccountCard({
                 </div>
               )}
             </div>
-            {dueDayLabel && (
-              <div className="flex flex-col items-start sm:items-end">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-[#5c6e64]">
-                  Due Date
-                </p>
-                <p className="mt-0.5 text-[13px] font-bold text-[#ffc857]">{dueDayLabel}</p>
-              </div>
-            )}
+            <div className="flex flex-row flex-wrap items-start gap-4 sm:flex-col sm:items-end sm:gap-3">
+              {statementDayLabel && (
+                <div className="flex flex-col items-start sm:items-end">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#5c6e64]">
+                    Statement Day
+                  </p>
+                  <p className="mt-0.5 text-[13px] font-bold text-[#9dd6ff]">{statementDayLabel}</p>
+                </div>
+              )}
+              {dueDayLabel && (
+                <div className="flex flex-col items-start sm:items-end">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#5c6e64]">
+                    Due Date
+                  </p>
+                  <p className="mt-0.5 text-[13px] font-bold text-[#ffc857]">{dueDayLabel}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

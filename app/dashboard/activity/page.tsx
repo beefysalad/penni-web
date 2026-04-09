@@ -25,7 +25,7 @@ import { useAccountsQuery } from '@/hooks/finance/use-accounts-query'
 import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { groupTransactionsIntoSections } from '@/lib/selectors'
 import { TYPE_FILTERS, type TypeFilter } from '@/lib/constants'
-import type { CategoryType } from '@/lib/finance.types'
+import { getAccountAvailableCredit, type CategoryType } from '@/lib/finance.types'
 import Link from 'next/link'
 import { ReceiptText, Search, Plus, Trash2, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, WalletCards, Calendar } from 'lucide-react'
 
@@ -204,7 +204,7 @@ export default function ActivityPage() {
     if (
       values.mode === 'EXPENSE' &&
       selectedAccount?.type === 'CREDIT_CARD' &&
-      amount > Number(selectedAccount.availableCredit ?? 0)
+      amount > Number(getAccountAvailableCredit(selectedAccount) ?? 0)
     ) {
       setError('amount', {
         type: 'manual',
