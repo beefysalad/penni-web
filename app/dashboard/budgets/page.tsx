@@ -112,6 +112,23 @@ function getBudgetStatusTone(status: BudgetTimingStatus) {
   return 'text-[#93a19a] bg-[#18221d]'
 }
 
+function getBudgetProgressState(spent: number, limit: number, alertThreshold: number) {
+  const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
+  const isOver = spent > limit
+  const isReached = !isOver && limit > 0 && spent >= limit
+  const isWarning = pct >= alertThreshold
+
+  return {
+    pct,
+    isOver,
+    isReached,
+    isWarning,
+    label: isOver ? 'Over budget' : isReached ? 'Budget reached' : isWarning ? 'Approaching limit' : 'On track',
+    labelClass: isOver ? 'text-[#ff8a94]' : isReached ? 'text-[#ffc857]' : isWarning ? 'text-[#ffc857]' : 'text-[#93a19a]',
+    barColor: isOver ? '#ff8a94' : isReached ? '#ffc857' : isWarning ? '#ffc857' : '#8bff62',
+  }
+}
+
 export default function BudgetsPage() {
   const budgetsQuery = useBudgetsQuery()
   const categoriesQuery = useCategoriesQuery('EXPENSE')
@@ -324,9 +341,11 @@ export default function BudgetsPage() {
           const spent = getSpentForBudget(budget, transactions)
           const limit = Number(budget.amount)
           const remaining = limit - spent
-          const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
-          const isOver = spent > limit
-          const barColor = isOver ? '#ff8a94' : pct > 80 ? '#ffc857' : '#8bff62'
+          const { pct, label, labelClass, barColor } = getBudgetProgressState(
+            spent,
+            limit,
+            budget.alertThreshold
+          )
           const timingStatus = getBudgetTimingStatus(budget, today)
           const categoryName = categoryMap.get(budget.categoryId ?? '')
 
@@ -383,9 +402,12 @@ export default function BudgetsPage() {
                 <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#1a2c1f]">
                   <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: barColor }} />
                 </div>
-                <p className="mt-3 text-[13px] font-semibold" style={{ color: remaining < 0 ? '#ff8a94' : '#dce2de' }}>
-                  {remaining < 0 ? 'Over ' : 'Left '}{formatCurrency(Math.abs(remaining), budget.currency)}
-                </p>
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <p className="text-[13px] font-semibold" style={{ color: remaining < 0 ? '#ff8a94' : '#dce2de' }}>
+                    {remaining < 0 ? 'Over ' : 'Left '}{formatCurrency(Math.abs(remaining), budget.currency)}
+                  </p>
+                  <span className={`text-[12px] font-semibold ${labelClass}`}>{label}</span>
+                </div>
               </div>
             </div>
           )

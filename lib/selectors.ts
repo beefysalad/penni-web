@@ -87,6 +87,17 @@ export function getSpentForBudget(
     .reduce((sum, transaction) => sum + Math.abs(Number(transaction.amount)), 0)
 }
 
+export type BudgetTimingStatus = 'CURRENT' | 'UPCOMING' | 'PAST'
+
+export function getBudgetTimingStatus(budget: Budget, now = new Date()): BudgetTimingStatus {
+  const start = new Date(budget.periodStart)
+  const end = new Date(budget.periodEnd)
+
+  if (now < start) return 'UPCOMING'
+  if (now > end) return 'PAST'
+  return 'CURRENT'
+}
+
 export function getCurrentMonthBounds() {
   const now = new Date()
   return {

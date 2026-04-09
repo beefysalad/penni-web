@@ -5,7 +5,7 @@ import {
   formatCurrency,
   formatCompactDate,
 } from '@/lib/formatters'
-import { getSpentForBudget } from '@/lib/selectors'
+import { getBudgetTimingStatus, getSpentForBudget } from '@/lib/selectors'
 import type { Budget, PlannedItem, Transaction } from '@/lib/finance.types'
 import {
   ArrowUpRight,
@@ -408,6 +408,8 @@ export function BudgetsSection({
   budgets: Budget[]
   transactions: Transaction[]
 }) {
+  const currentBudgets = budgets.filter((budget) => getBudgetTimingStatus(budget) === 'CURRENT')
+
   return (
     <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
       <div className="flex flex-row items-start justify-between gap-4">
@@ -427,18 +429,24 @@ export function BudgetsSection({
       <div className="mt-6 space-y-3">
         {isLoading ? (
           <div className="h-24 animate-pulse rounded-[24px] bg-[#131b17]" />
-        ) : budgets.length > 0 ? (
-          budgets.slice(0, 3).map((budget) => {
+        ) : currentBudgets.length > 0 ? (
+          currentBudgets.slice(0, 3).map((budget) => {
             const spent = getSpentForBudget(budget, transactions)
             const limit = Number(budget.amount)
             const remaining = limit - spent
             const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
             const isOver = spent > limit
+            const isReached = !isOver && limit > 0 && spent >= limit
+            const isWarning = pct >= budget.alertThreshold
             const barColor = isOver
               ? '#ff8a94'
-              : pct > 80
+              : isReached
+                ? '#ffc857'
+              : isWarning
                 ? '#ffc857'
                 : '#8bff62'
+            const statusLabel = isOver ? 'Over budget' : isReached ? 'Budget reached' : isWarning ? 'Approaching limit' : 'On track'
+            const statusClass = isOver ? 'text-[#ff8a94]' : isReached ? 'text-[#ffc857]' : isWarning ? 'text-[#ffc857]' : 'text-[#93a19a]'
 
             return (
               <div
@@ -476,13 +484,19 @@ export function BudgetsSection({
                     style={{ backgroundColor: barColor }}
                   />
                 </div>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <span className="text-[11px] text-[#6d786f]">{Math.round(pct)}% used</span>
+                  <span className={cn('text-[11px] font-semibold', statusClass)}>{statusLabel}</span>
+                </div>
               </div>
             )
           })
         ) : (
           <div className="rounded-[24px] bg-[#131b17] px-5 py-8 text-center">
             <p className="text-[14px] leading-relaxed font-medium text-[#7f8c86]">
-              Set a budget to start tracking category drift and remaining room.
+              {budgets.length > 0
+                ? 'No budgets are active for today.'
+                : 'Set a budget to start tracking category drift and remaining room.'}
             </p>
           </div>
         )}
