@@ -5,8 +5,15 @@ import { notFound, useParams } from 'next/navigation'
 import { useMemo } from 'react'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
-import { AccountCard, AccountSkeletonCard, TransactionRow } from '@/components/finance/finance-components'
-import { FinanceEmptyState, PlannedItemRow } from '@/components/finance/management-components'
+import {
+  AccountCard,
+  AccountSkeletonCard,
+  TransactionRow,
+} from '@/components/finance/finance-components'
+import {
+  FinanceEmptyState,
+  PlannedItemRow,
+} from '@/components/finance/management-components'
 import { Button } from '@/components/ui/button'
 import { useAccountsQuery } from '@/hooks/finance/use-accounts-query'
 import { usePlannedItemsQuery } from '@/hooks/finance/use-planned-items-query'
@@ -16,16 +23,26 @@ import type { PlannedItem } from '@/lib/finance.types'
 import { formatCurrency, formatShortDate } from '@/lib/formatters'
 import { getPlannedItemRecurringState } from '@/lib/recurring'
 import { groupTransactionsIntoSections } from '@/lib/selectors'
-import { ArrowDownLeft, ArrowRightLeft, ArrowUpRight, Calendar, ReceiptText } from 'lucide-react'
+import {
+  ArrowDownLeft,
+  ArrowRightLeft,
+  ArrowUpRight,
+  Calendar,
+  ReceiptText,
+} from 'lucide-react'
 
-function getStatusLabel(status: ReturnType<typeof getPlannedItemRecurringState>['status']) {
+function getStatusLabel(
+  status: ReturnType<typeof getPlannedItemRecurringState>['status']
+) {
   if (status === 'OVERDUE') return 'Overdue'
   if (status === 'DUE') return 'Due today'
   if (status === 'COMPLETE') return 'Complete'
   return 'Upcoming'
 }
 
-function getStatusTone(status: ReturnType<typeof getPlannedItemRecurringState>['status']) {
+function getStatusTone(
+  status: ReturnType<typeof getPlannedItemRecurringState>['status']
+) {
   if (status === 'OVERDUE') return 'danger' as const
   if (status === 'COMPLETE') return 'success' as const
   return 'neutral' as const
@@ -83,11 +100,17 @@ function StatsTile({
 
   return (
     <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
-      <div className={`flex size-10 items-center justify-center rounded-full ${iconWrapClass}`}>
+      <div
+        className={`flex size-10 items-center justify-center rounded-full ${iconWrapClass}`}
+      >
         <Icon className={`size-5 ${toneClass}`} />
       </div>
-      <p className="mt-4 text-[10px] font-bold uppercase tracking-[1.8px] text-[#6d786f]">{label}</p>
-      <p className={`mt-2 text-[20px] font-bold tracking-tight ${toneClass}`}>{value}</p>
+      <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#6d786f] uppercase">
+        {label}
+      </p>
+      <p className={`mt-2 text-[20px] font-bold tracking-tight ${toneClass}`}>
+        {value}
+      </p>
       <p className="mt-1 text-[13px] font-medium text-[#7f8c86]">{hint}</p>
     </div>
   )
@@ -112,7 +135,10 @@ export default function AccountDetailPage() {
   const isCreditCard = account?.type === 'CREDIT_CARD'
 
   const accountTransactions = useMemo(
-    () => allTransactions.filter((transaction) => transaction.accountId === accountId),
+    () =>
+      allTransactions.filter(
+        (transaction) => transaction.accountId === accountId
+      ),
     [allTransactions, accountId]
   )
 
@@ -131,7 +157,10 @@ export default function AccountDetailPage() {
   )
 
   const plannedItemsWithState = useMemo(
-    () => plannedItems.map((item) => getPlannedItemRecurringState(item, allTransactions)),
+    () =>
+      plannedItems.map((item) =>
+        getPlannedItemRecurringState(item, allTransactions)
+      ),
     [plannedItems, allTransactions]
   )
 
@@ -141,23 +170,38 @@ export default function AccountDetailPage() {
   )
 
   const cashFlowTransactions = useMemo(
-    () => accountTransactions.filter((transaction) => transaction.source !== 'TRANSFER'),
+    () =>
+      accountTransactions.filter(
+        (transaction) => transaction.source !== 'TRANSFER'
+      ),
     [accountTransactions]
   )
 
   const moneyIn = useMemo(
     () =>
       cashFlowTransactions
-        .filter((transaction) => transaction.type === 'INCOME' && transaction.source !== 'TRANSFER')
-        .reduce((sum, transaction) => sum + Number(transaction.amount), Math.max(openingBalance, 0)),
+        .filter(
+          (transaction) =>
+            transaction.type === 'INCOME' && transaction.source !== 'TRANSFER'
+        )
+        .reduce(
+          (sum, transaction) => sum + Number(transaction.amount),
+          Math.max(openingBalance, 0)
+        ),
     [cashFlowTransactions, openingBalance]
   )
 
   const moneyOut = useMemo(
     () =>
       cashFlowTransactions
-        .filter((transaction) => transaction.type === 'EXPENSE' && transaction.source !== 'TRANSFER')
-        .reduce((sum, transaction) => sum + Number(transaction.amount), Math.abs(Math.min(openingBalance, 0))),
+        .filter(
+          (transaction) =>
+            transaction.type === 'EXPENSE' && transaction.source !== 'TRANSFER'
+        )
+        .reduce(
+          (sum, transaction) => sum + Number(transaction.amount),
+          Math.abs(Math.min(openingBalance, 0))
+        ),
     [cashFlowTransactions, openingBalance]
   )
 
@@ -181,12 +225,20 @@ export default function AccountDetailPage() {
     () =>
       accountTransactions
         .filter((transaction) => transaction.source === 'TRANSFER')
-        .reduce((sum, transaction) => sum + Math.abs(Number(transaction.amount)), 0),
+        .reduce(
+          (sum, transaction) => sum + Math.abs(Number(transaction.amount)),
+          0
+        ),
     [accountTransactions]
   )
 
-  const lastActivity = accountTransactions[0] ? formatShortDate(accountTransactions[0].transactionAt) : 'No activity yet'
-  const isLoading = accountsQuery.isLoading || transactionsQuery.isLoading || plannedItemsQuery.isLoading
+  const lastActivity = accountTransactions[0]
+    ? formatShortDate(accountTransactions[0].transactionAt)
+    : 'No activity yet'
+  const isLoading =
+    accountsQuery.isLoading ||
+    transactionsQuery.isLoading ||
+    plannedItemsQuery.isLoading
 
   if (!accountId) notFound()
   if (!isLoading && !account) notFound()
@@ -202,16 +254,27 @@ export default function AccountDetailPage() {
         />
       </DashboardHeaderShell>
 
-      <div className="flex flex-col gap-6 px-4 pb-28 pt-6 md:px-6 lg:px-8">
+      <div className="flex flex-col gap-6 px-4 pt-6 pb-28 md:px-6 lg:px-8">
         <div className="flex flex-wrap items-center gap-3">
-          <Button asChild variant="secondary" size="sm" className="bg-[#131b17] text-[#dce2de] hover:bg-[#1a2620]">
+          <Button
+            asChild
+            variant="secondary"
+            size="sm"
+            className="bg-[#131b17] text-[#dce2de] hover:bg-[#1a2620]"
+          >
             <Link href="/dashboard/accounts">Back to accounts</Link>
           </Button>
+          {isCreditCard ? (
+            <Button asChild size="sm">
+              <Link
+                href={`/dashboard/activity?mode=TRANSFER&toAccountId=${accountId}&intent=card-payment`}
+              >
+                Pay card
+              </Link>
+            </Button>
+          ) : null}
           <Button asChild size="sm">
             <Link href="/dashboard/activity">Add transaction</Link>
-          </Button>
-          <Button asChild variant="secondary" size="sm" className="bg-[#131b17] text-[#dce2de] hover:bg-[#1a2620]">
-            <Link href="/dashboard/planned-items">View recurring</Link>
           </Button>
         </div>
 
@@ -225,7 +288,10 @@ export default function AccountDetailPage() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatsTile
               label={isCreditCard ? 'Payments' : 'Money in'}
-              value={formatCurrency(isCreditCard ? creditCardPayments : moneyIn, account.currency)}
+              value={formatCurrency(
+                isCreditCard ? creditCardPayments : moneyIn,
+                account.currency
+              )}
               hint={
                 isCreditCard
                   ? 'Credits and payments posted to this card so far.'
@@ -236,7 +302,10 @@ export default function AccountDetailPage() {
             />
             <StatsTile
               label={isCreditCard ? 'Charges' : 'Money out'}
-              value={formatCurrency(isCreditCard ? creditCardCharges : moneyOut, account.currency)}
+              value={formatCurrency(
+                isCreditCard ? creditCardCharges : moneyOut,
+                account.currency
+              )}
               hint={
                 isCreditCard
                   ? 'Card spend posted to this account so far.'
@@ -265,7 +334,9 @@ export default function AccountDetailPage() {
           <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">Recent activity</h3>
+                <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">
+                  Recent activity
+                </h3>
                 <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
                   Everything that has touched this account so far.
                 </p>
@@ -285,13 +356,17 @@ export default function AccountDetailPage() {
                 <div className="space-y-5">
                   {sections.map((section) => (
                     <div key={section.title} className="space-y-2.5">
-                      <p className="px-1 text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">{section.title}</p>
+                      <p className="px-1 text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
+                        {section.title}
+                      </p>
                       <div className="overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
                         {section.data.map((transaction, index) => (
                           <TransactionRow
                             key={transaction.id}
                             transaction={transaction}
-                            accountLabel={ACCOUNT_TYPE_META[account!.type].label}
+                            accountLabel={
+                              ACCOUNT_TYPE_META[account!.type].label
+                            }
                             isLast={index === section.data.length - 1}
                           />
                         ))}
@@ -312,7 +387,9 @@ export default function AccountDetailPage() {
           <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">Recurring tied here</h3>
+                <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">
+                  Recurring tied here
+                </h3>
                 <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
                   Planned bills and income currently linked to this account.
                 </p>

@@ -5,6 +5,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
+import { useSearchParams } from 'next/navigation'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
 import {
@@ -132,6 +133,7 @@ function toIsoDate(dateValue: string) {
 }
 
 export default function ActivityPage() {
+  const searchParams = useSearchParams()
   const transactionsQuery = useTransactionsQuery()
   const accountsQuery = useAccountsQuery()
   const expenseCategoriesQuery = useCategoriesQuery('EXPENSE')
@@ -161,6 +163,8 @@ export default function ActivityPage() {
   const accountId = useWatch({ control, name: 'accountId' })
   const toAccountId = useWatch({ control, name: 'toAccountId' })
   const categoryId = useWatch({ control, name: 'categoryId' })
+  const paymentIntent = searchParams.get('intent') === 'card-payment'
+  const isCardPayment = mode === 'TRANSFER' && paymentIntent
 
   const allTransactions = useMemo(
     () => transactionsQuery.data ?? [],
@@ -240,6 +244,38 @@ export default function ActivityPage() {
     }
   }, [mode, accountId, setValue, transferSourceAccounts])
 
+  useEffect(() => {
+    const requestedMode = searchParams.get('mode')
+    const requestedToAccountId = searchParams.get('toAccountId')
+
+    if (requestedMode !== 'TRANSFER') {
+      return
+    }
+
+    setShowComposer(true)
+    setValue('mode', 'TRANSFER', { shouldDirty: true })
+    setValue('toAccountId', requestedToAccountId ?? '', { shouldDirty: true })
+
+    if (!accountId) {
+      const fallbackSourceAccount =
+        transferSourceAccounts.find(
+          (account) => account.id !== requestedToAccountId
+        ) ?? transferSourceAccounts[0]
+
+      if (fallbackSourceAccount) {
+        setValue('accountId', fallbackSourceAccount.id, { shouldDirty: true })
+      }
+    }
+
+    clearErrors(['title', 'amount', 'accountId', 'toAccountId', 'categoryId'])
+  }, [
+    accountId,
+    clearErrors,
+    searchParams,
+    setValue,
+    transferSourceAccounts,
+  ])
+
   const handleCreateTransaction = (values: TransactionForm) => {
     const title = values.title.trim()
     const amount = Number(values.amount)
@@ -313,7 +349,7 @@ export default function ActivityPage() {
         },
         {
           onSuccess: () => {
-            toast.success('Transfer recorded.')
+            toast.success(isCardPayment ? 'Card payment recorded.' : 'Transfer recorded.')
             reset({
               ...DEFAULT_FORM,
               mode: values.mode,
@@ -325,7 +361,9 @@ export default function ActivityPage() {
             toast.error(
               error instanceof Error
                 ? error.message
-                : 'Could not create transfer.'
+                : isCardPayment
+                  ? 'Could not record payment.'
+                  : 'Could not create transfer.'
             )
           },
         }
@@ -376,7 +414,7 @@ export default function ActivityPage() {
             Quick capture
           </p>
           <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
-            Add a transaction
+            {isCardPayment ? 'Pay card' : 'Add a transaction'}
           </h2>
         </div>
         <div className="rounded-full bg-[#18221d] px-3 py-1 text-[11px] font-bold text-[#8bff62]">
@@ -421,7 +459,9 @@ export default function ActivityPage() {
                     ? 'Expense'
                     : item === 'INCOME'
                       ? 'Income'
-                      : 'Transfer'}
+                      : isCardPayment
+                        ? 'Payment'
+                        : 'Transfer'}
                 </button>
               )
             })}
@@ -456,7 +496,7 @@ export default function ActivityPage() {
           >
             <option value="EXPENSE">Expense</option>
             <option value="INCOME">Income</option>
-            <option value="TRANSFER">Transfer</option>
+            <option value="TRANSFER">{isCardPayment ? 'Payment' : 'Transfer'}</option>
           </select>
         </div>
 
@@ -472,14 +512,16 @@ export default function ActivityPage() {
 
         <div className="space-y-2 xl:col-span-2">
           <Label htmlFor="transaction-title">
-            {mode === 'TRANSFER' ? 'Label' : 'Title'}
+            {mode === 'TRANSFER' ? (isCardPayment ? 'Payment note' : 'Label') : 'Title'}
           </Label>
           <Input
             id="transaction-title"
             {...register('title')}
             placeholder={
               mode === 'TRANSFER'
-                ? 'e.g. ATM withdrawal, Move to savings'
+                ? isCardPayment
+                  ? 'e.g. Partial payment, Paid from payroll'
+                  : 'e.g. ATM withdrawal, Move to savings'
                 : 'e.g. Groceries, Salary, Internet bill'
             }
           />
@@ -487,7 +529,7 @@ export default function ActivityPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="transaction-amount">Amount</Label>
+          <Label htmlFor="transaction-amount">{isCardPayment ? 'Payment amount' : 'Amount'}</Label>
           <Input
             id="transaction-amount"
             type="number"
@@ -502,7 +544,7 @@ export default function ActivityPage() {
 
         <div className="space-y-2">
           <Label htmlFor="transaction-account">
-            {mode === 'TRANSFER' ? 'From account' : 'Account'}
+            {mode === 'TRANSFER' ? (isCardPayment ? 'Pay from' : 'From account') : 'Account'}
           </Label>
           <select
             id="transaction-account"
@@ -534,7 +576,7 @@ export default function ActivityPage() {
 
         {mode === 'TRANSFER' ? (
           <div className="space-y-2">
-            <Label htmlFor="transaction-to-account">To account</Label>
+            <Label htmlFor="transaction-to-account">{isCardPayment ? 'Card' : 'To account'}</Label>
             <select
               id="transaction-to-account"
               value={toAccountId}
@@ -547,7 +589,7 @@ export default function ActivityPage() {
               }
               className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
             >
-              <option value="">Choose destination account</option>
+              <option value="">{isCardPayment ? 'Choose card to pay' : 'Choose destination account'}</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name}
@@ -603,7 +645,9 @@ export default function ActivityPage() {
           createTransferMutation.isPending
             ? 'Saving...'
             : mode === 'TRANSFER'
-              ? 'Save transfer'
+              ? isCardPayment
+                ? 'Save payment'
+                : 'Save transfer'
               : 'Save transaction'}
         </Button>
         <Button
@@ -849,8 +893,12 @@ export default function ActivityPage() {
       <MobileSheet
         open={showComposer}
         onClose={() => setShowComposer(false)}
-        eyebrow="Quick capture"
-        title={`New ${mode === 'INCOME' ? 'income' : mode === 'TRANSFER' ? 'transfer' : 'expense'}`}
+        eyebrow={isCardPayment ? 'Credit card' : 'Quick capture'}
+        title={
+          isCardPayment
+            ? 'Pay card'
+            : `New ${mode === 'INCOME' ? 'income' : mode === 'TRANSFER' ? 'transfer' : 'expense'}`
+        }
       >
         {composerContent}
       </MobileSheet>

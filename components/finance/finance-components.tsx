@@ -9,6 +9,7 @@ import {
   ArrowUpRight, 
   ArrowDownLeft, 
   ArrowRightLeft,
+  ChevronRight,
   LucideIcon,
   TrendingUp
 } from 'lucide-react'
@@ -59,7 +60,7 @@ export function AccountCard({
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       className={cn(
-        'rounded-[28px] border border-[#1b2a21]/60 bg-[#111916] p-5 transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]',
+        'group rounded-[28px] border border-[#1b2a21]/60 bg-[#111916] p-5 transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]',
         onClick ? 'cursor-pointer' : ''
       )}
     >
@@ -173,6 +174,26 @@ export function AccountCard({
           </div>
         </div>
       )}
+
+      {onClick ? (
+        <div className="mt-4 border-t border-[#1b2a21]/30 pt-4">
+          <div className="flex items-center justify-between rounded-[18px] bg-[#0f1512] px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold text-[#f4f7f5]">
+                {isCreditCard ? 'View card details' : 'View details'}
+              </p>
+              <p className="mt-0.5 text-[11px] font-medium text-[#7f8c86]">
+                {isCreditCard
+                  ? 'See activity, due dates, and card-specific actions.'
+                  : 'Open activity, balances, and recurring items.'}
+              </p>
+            </div>
+            <div className="ml-4 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#18221d] text-[#8bff62] transition-transform group-hover:translate-x-0.5">
+              <ChevronRight className="size-5" />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </motion.div>
   )
 }
