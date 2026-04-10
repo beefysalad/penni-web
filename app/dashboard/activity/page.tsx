@@ -186,6 +186,13 @@ export default function ActivityPage() {
     }
     return map
   }, [accounts])
+  const accountTypeMap = useMemo(() => {
+    const map = new Map<string, (typeof accounts)[number]['type']>()
+    for (const account of accounts) {
+      map.set(account.id, account.type)
+    }
+    return map
+  }, [accounts])
   const cashFlowTransactions = useMemo(
     () =>
       allTransactions.filter(
@@ -840,6 +847,11 @@ export default function ActivityPage() {
                       accountLabel={
                         transaction.accountId
                           ? (accountNameMap.get(transaction.accountId) ?? null)
+                          : null
+                      }
+                      accountType={
+                        transaction.accountId
+                          ? (accountTypeMap.get(transaction.accountId) ?? null)
                           : null
                       }
                       isLast={index === section.data.length - 1}

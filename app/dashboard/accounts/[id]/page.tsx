@@ -367,6 +367,7 @@ export default function AccountDetailPage() {
                             accountLabel={
                               ACCOUNT_TYPE_META[account!.type].label
                             }
+                            accountType={account!.type}
                             isLast={index === section.data.length - 1}
                           />
                         ))}

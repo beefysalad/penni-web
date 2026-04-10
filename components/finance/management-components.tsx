@@ -29,8 +29,10 @@ export function FinanceEmptyState({
       <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-[#213227] bg-[#16211b] shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
         <Icon className="size-7 text-[#8bff62]" strokeWidth={2.2} />
       </div>
-      <h3 className="text-[18px] font-bold tracking-tight text-[#f4f7f5]">{title}</h3>
-      <p className="mt-2 max-w-[260px] text-[14px] font-medium leading-relaxed text-[#7f8c86]">
+      <h3 className="text-[18px] font-bold tracking-tight text-[#f4f7f5]">
+        {title}
+      </h3>
+      <p className="mt-2 max-w-[260px] text-[14px] leading-relaxed font-medium text-[#7f8c86]">
         {description}
       </p>
     </div>
@@ -48,11 +50,22 @@ export function FrontendOnlyBadge() {
   )
 }
 
-export function CategoryRow({ category, isLast }: { category: Category; isLast?: boolean }) {
+export function CategoryRow({
+  category,
+  isLast,
+}: {
+  category: Category
+  isLast?: boolean
+}) {
   const isIncome = category.type === 'INCOME'
 
   return (
-    <div className={cn('flex items-center gap-3 px-4 py-3.5', !isLast && 'border-b border-[#17211c]/60')}>
+    <div
+      className={cn(
+        'flex items-center gap-3 px-4 py-3.5',
+        !isLast && 'border-b border-[#17211c]/60'
+      )}
+    >
       <div
         className="flex size-10 items-center justify-center rounded-[14px]"
         style={{ backgroundColor: `${category.colorHex ?? '#18221d'}22` }}
@@ -63,20 +76,31 @@ export function CategoryRow({ category, isLast }: { category: Category; isLast?:
         />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-bold text-[#f4f7f5]">{category.name}</p>
+        <p className="truncate text-[15px] font-bold text-[#f4f7f5]">
+          {category.name}
+        </p>
         <div className="mt-1 flex items-center gap-2">
           <Pill
             label={isIncome ? 'Income' : 'Expense'}
             variant="subtle"
             className={cn(
               'border border-transparent',
-              isIncome ? 'bg-[#16211b] text-[#41d6b2]' : 'bg-[#241719] text-[#ff8a94]'
+              isIncome
+                ? 'bg-[#16211b] text-[#41d6b2]'
+                : 'bg-[#241719] text-[#ff8a94]'
             )}
           />
-          {category.isDefault && <span className="text-[11px] font-bold text-[#6d786f]">Default</span>}
+
+          {category.isDefault ? (
+            <span className="text-[11px] font-bold text-[#6d786f]">
+              Default
+            </span>
+          ) : (
+            <span className="text-[11px] font-bold text-[#6d786f]">Custom</span>
+          )}
         </div>
       </div>
-      <span className="text-[11px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">
+      <span className="text-[11px] font-bold tracking-[1.8px] text-[#4a5650] uppercase">
         {category.slug}
       </span>
     </div>
@@ -115,7 +139,12 @@ export function PlannedItemRow({
   const isExpense = item.type === 'EXPENSE'
 
   return (
-    <div className={cn('flex items-center gap-3 px-4 py-4', !isLast && 'border-b border-[#17211c]/60')}>
+    <div
+      className={cn(
+        'flex items-center gap-3 px-4 py-4',
+        !isLast && 'border-b border-[#17211c]/60'
+      )}
+    >
       <div
         className={cn(
           'flex size-11 items-center justify-center rounded-[14px]',
@@ -129,9 +158,15 @@ export function PlannedItemRow({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-bold text-[#f4f7f5]">{item.title}</p>
+        <p className="truncate text-[15px] font-bold text-[#f4f7f5]">
+          {item.title}
+        </p>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] font-medium text-[#7f8c86]">
-          <span>{formatCompactDate(scheduledFor ?? item.nextOccurrenceAt ?? item.startDate)}</span>
+          <span>
+            {formatCompactDate(
+              scheduledFor ?? item.nextOccurrenceAt ?? item.startDate
+            )}
+          </span>
           <span className="text-[#314238]">•</span>
           <span>{formatRecurrenceLabel(item)}</span>
           {statusLabel ? (
@@ -139,7 +174,7 @@ export function PlannedItemRow({
               <span className="text-[#314238]">•</span>
               <span
                 className={cn(
-                  'font-bold uppercase tracking-[1.2px]',
+                  'font-bold tracking-[1.2px] uppercase',
                   statusTone === 'danger'
                     ? 'text-[#ff8a94]'
                     : statusTone === 'success'
@@ -153,11 +188,18 @@ export function PlannedItemRow({
           ) : null}
         </div>
         {helperText ? (
-          <p className="mt-1 text-[12px] font-medium text-[#93a19a]">{helperText}</p>
+          <p className="mt-1 text-[12px] font-medium text-[#93a19a]">
+            {helperText}
+          </p>
         ) : null}
       </div>
       <div className="flex items-center gap-3">
-        <p className={cn('text-[15px] font-bold', isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]')}>
+        <p
+          className={cn(
+            'text-[15px] font-bold',
+            isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]'
+          )}
+        >
           {isExpense ? '-' : '+'}
           {formatCurrency(Number(item.amount), item.currency)}
         </p>
@@ -180,9 +222,15 @@ export function CreationHint({
     <div className="rounded-[28px] border border-[#17211c] bg-[#101713] p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">Draft flow</p>
-          <h3 className="mt-2 text-[20px] font-bold tracking-tight text-[#f4f7f5]">{title}</h3>
-          <p className="mt-2 text-[14px] leading-relaxed font-medium text-[#7f8c86]">{description}</p>
+          <p className="text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
+            Draft flow
+          </p>
+          <h3 className="mt-2 text-[20px] font-bold tracking-tight text-[#f4f7f5]">
+            {title}
+          </h3>
+          <p className="mt-2 text-[14px] leading-relaxed font-medium text-[#7f8c86]">
+            {description}
+          </p>
         </div>
         <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
           <Sparkles className="size-5 text-[#8bff62]" />
@@ -191,7 +239,9 @@ export function CreationHint({
 
       <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#18221d] px-4 py-2">
         <FolderPlus className="size-4 text-[#8bff62]" />
-        <span className="text-[12px] font-bold text-[#dce2de]">{actionLabel}</span>
+        <span className="text-[12px] font-bold text-[#dce2de]">
+          {actionLabel}
+        </span>
       </div>
     </div>
   )
@@ -205,7 +255,12 @@ export function SectionActionLink({
   label: string
 }) {
   return (
-    <Button asChild variant="secondary" size="sm" className="bg-[#131b17] text-[#dce2de] hover:bg-[#1a2620]">
+    <Button
+      asChild
+      variant="secondary"
+      size="sm"
+      className="bg-[#131b17] text-[#dce2de] hover:bg-[#1a2620]"
+    >
       <a href={href}>{label}</a>
     </Button>
   )

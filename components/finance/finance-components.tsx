@@ -19,6 +19,7 @@ import {
   getAccountCreditLimit,
   getAccountDueDayOfMonth,
   getAccountStatementDayOfMonth,
+  type AccountType,
   type Account,
   type Transaction,
 } from '@/lib/finance.types'
@@ -203,28 +204,48 @@ export function AccountCard({
 export function TransactionRow({
   transaction,
   accountLabel,
+  accountType,
   isLast,
   action,
 }: {
   transaction: Transaction
   accountLabel?: string | null
+  accountType?: AccountType | null
   isLast?: boolean
   action?: ReactNode
 }) {
   const isExpense = transaction.type === 'EXPENSE'
   const sign = isExpense ? '-' : '+'
   const isTransfer = transaction.source === 'TRANSFER'
+  const normalizedTitle = transaction.title.trim().toLowerCase()
+  const looksLikePayment =
+    normalizedTitle === 'payment' ||
+    normalizedTitle.includes('pay card') ||
+    normalizedTitle.includes('card payment')
+  const isCreditCardAccount = accountType === 'CREDIT_CARD'
+  const isCardPayment = isTransfer && (isCreditCardAccount || looksLikePayment)
   const amountColor = isTransfer ? 'text-[#ffd66b]' : isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]'
   const iconBg = isTransfer ? 'bg-[#2a2412]' : isExpense ? 'bg-[#241719]' : 'bg-[#16211b]'
   const Icon = isTransfer ? ArrowRightLeft : isExpense ? ArrowDownLeft : ArrowUpRight
   const iconColor = isTransfer ? 'text-[#ffd66b]' : isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]'
+  const displayTitle = isTransfer
+    ? isCardPayment
+      ? isCreditCardAccount
+        ? 'Payment received'
+        : 'Card payment'
+      : transaction.type === 'INCOME'
+        ? 'Transfer received'
+        : 'Transfer sent'
+    : transaction.title
   const sourceLabel =
     transaction.source === 'RECURRING'
       ? 'Recurring'
       : transaction.source === 'IMPORTED'
         ? 'Imported'
         : transaction.source === 'TRANSFER'
-          ? 'Transfer'
+          ? isCardPayment
+            ? 'Card payment'
+            : 'Transfer'
           : null
 
   return (
@@ -237,7 +258,7 @@ export function TransactionRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[16px] font-bold text-[#f4f7f5]">{transaction.title}</p>
+              <p className="truncate text-[16px] font-bold text-[#f4f7f5]">{displayTitle}</p>
               <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="text-[13px] font-medium text-[#6d786f]">{formatShortDate(transaction.transactionAt)}</span>
                 {sourceLabel && (
