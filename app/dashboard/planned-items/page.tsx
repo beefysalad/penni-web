@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -24,6 +24,7 @@ import {
   useDeletePlannedItemMutation,
   usePlannedItemsQuery,
 } from '@/hooks/finance/use-planned-items-query'
+import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { useTransactionsQuery } from '@/hooks/finance/use-transactions-query'
 import type {
   CategoryType,
@@ -39,6 +40,7 @@ import { Calendar, Plus, Sparkles, Trash2 } from 'lucide-react'
 
 type PlannedItemForm = {
   type: CategoryType
+  categoryId: string
   title: string
   amount: string
   accountId: string
@@ -50,6 +52,7 @@ type PlannedItemForm = {
 
 const DEFAULT_PLANNED_ITEM_FORM: PlannedItemForm = {
   type: 'EXPENSE',
+  categoryId: '',
   title: '',
   amount: '',
   accountId: '',
@@ -71,6 +74,7 @@ const RECURRENCE_OPTIONS: Array<{ label: string; value: RecurrenceFrequency }> =
 const plannedItemFormSchema = z
   .object({
     type: z.enum(['EXPENSE', 'INCOME']),
+    categoryId: z.string(),
     title: z.string().trim().min(1, 'A recurring item name is required.'),
     amount: z
       .string()
@@ -190,6 +194,8 @@ function getHelperText(plannedItem: PlannedItemWithRecurringState) {
 export default function PlannedItemsPage() {
   const plannedItemsQuery = usePlannedItemsQuery({ isActive: true })
   const accountsQuery = useAccountsQuery()
+  const expenseCategoriesQuery = useCategoriesQuery('EXPENSE')
+  const incomeCategoriesQuery = useCategoriesQuery('INCOME')
   const transactionsQuery = useTransactionsQuery()
   const createPlannedItemMutation = useCreatePlannedItemMutation()
   const completePlannedItemMutation = useCompletePlannedItemMutation()
@@ -211,13 +217,31 @@ export default function PlannedItemsPage() {
 
   const type = useWatch({ control, name: 'type' })
   const accountId = useWatch({ control, name: 'accountId' })
+  const categoryId = useWatch({ control, name: 'categoryId' })
   const recurrence = useWatch({ control, name: 'recurrence' })
   const title = useWatch({ control, name: 'title' })
   const amount = useWatch({ control, name: 'amount' })
 
   const accounts = accountsQuery.data ?? []
+  const expenseCategories = expenseCategoriesQuery.data ?? []
+  const incomeCategories = incomeCategoriesQuery.data ?? []
+  const categories = type === 'INCOME' ? incomeCategories : expenseCategories
   const plannedItems = plannedItemsQuery.data ?? []
   const transactions = transactionsQuery.data ?? []
+
+  useEffect(() => {
+    if (!categoryId) return
+    if (categories.some((category) => category.id === categoryId)) return
+    setValue('categoryId', '', { shouldDirty: true, shouldTouch: true })
+  }, [categories, categoryId, setValue])
+
+  useEffect(() => {
+    if (categoryId || categories.length === 0) return
+    setValue('categoryId', categories[0]?.id ?? '', {
+      shouldDirty: true,
+      shouldTouch: true,
+    })
+  }, [categories, categoryId, setValue, type])
 
   const plannedItemsWithState = useMemo(
     () =>
@@ -238,11 +262,15 @@ export default function PlannedItemsPage() {
 
   const selectedAccount =
     accounts.find((account) => account.id === accountId) ?? null
+  const selectedCategory =
+    categories.find((category) => category.id === categoryId) ?? null
   const requiresAccount = type === 'INCOME'
   const isSemiMonthly = recurrence === 'SEMI_MONTHLY'
   const isLoading =
     plannedItemsQuery.isLoading ||
     accountsQuery.isLoading ||
+    expenseCategoriesQuery.isLoading ||
+    incomeCategoriesQuery.isLoading ||
     transactionsQuery.isLoading
 
   const resetComposer = () => {
@@ -264,6 +292,7 @@ export default function PlannedItemsPage() {
     createPlannedItemMutation.mutate(
       {
         accountId: values.accountId || undefined,
+        categoryId: values.categoryId || undefined,
         type: values.type,
         title,
         amount: amount.toFixed(2),
@@ -585,6 +614,35 @@ export default function PlannedItemsPage() {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="planned-category">Category</Label>
+          <select
+            id="planned-category"
+            value={categoryId}
+            onChange={(event) =>
+              setValue('categoryId', event.target.value, {
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+            }
+            className="h-12 w-full rounded-[1.2rem] border border-[#17211c] bg-[#131b17] px-4 text-[15px] font-medium text-[#f4f7f5] transition outline-none focus:border-[#2a3a31] focus:ring-2 focus:ring-[#2a3a31]/30"
+          >
+            <option value="">Uncategorized</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          {categories.length === 0 ? (
+            <p className="text-[12px] font-medium text-[#7f8c86]">
+              {type === 'INCOME'
+                ? 'No income categories yet.'
+                : 'No expense categories yet.'}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="planned-account">
             {type === 'INCOME' ? 'Deposit into' : 'Pay from'}
           </Label>
@@ -693,6 +751,11 @@ export default function PlannedItemsPage() {
         <p className="mt-2 text-[16px] font-bold text-[#f4f7f5]">
           {title?.trim() || 'Your recurring item'}
         </p>
+        {selectedCategory ? (
+          <p className="mt-1 text-[12px] font-semibold text-[#93a19a]">
+            {selectedCategory.name}
+          </p>
+        ) : null}
         <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
           {amount ? formatCurrency(Number(amount) || 0) : '₱0.00'} •{' '}
           {RECURRENCE_OPTIONS.find((option) => option.value === recurrence)
