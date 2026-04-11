@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -144,7 +144,9 @@ function ActivityPageContent() {
 
   const [activeTypeFilter, setActiveTypeFilter] = useState<TypeFilter>('All')
   const [searchQuery, setSearchQuery] = useState('')
-  const [showComposer, setShowComposer] = useState(false)
+  const [showComposer, setShowComposer] = useState(
+    () => searchParams.get('mode') === 'TRANSFER'
+  )
   const {
     register,
     handleSubmit,
@@ -251,15 +253,22 @@ function ActivityPageContent() {
     }
   }, [mode, accountId, setValue, transferSourceAccounts])
 
+  const hasPopulatedFromUrl = useRef(false)
+
   useEffect(() => {
     const requestedMode = searchParams.get('mode')
     const requestedToAccountId = searchParams.get('toAccountId')
 
-    if (requestedMode !== 'TRANSFER') {
+    if (
+      requestedMode !== 'TRANSFER' ||
+      hasPopulatedFromUrl.current ||
+      transferSourceAccounts.length === 0
+    ) {
       return
     }
 
-    setShowComposer(true)
+    hasPopulatedFromUrl.current = true
+
     setValue('mode', 'TRANSFER', { shouldDirty: true })
     setValue('toAccountId', requestedToAccountId ?? '', { shouldDirty: true })
 
