@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -132,7 +132,7 @@ function toIsoDate(dateValue: string) {
   return new Date(`${dateValue}T12:00:00`).toISOString()
 }
 
-export default function ActivityPage() {
+function ActivityPageContent() {
   const searchParams = useSearchParams()
   const transactionsQuery = useTransactionsQuery()
   const accountsQuery = useAccountsQuery()
@@ -915,5 +915,13 @@ export default function ActivityPage() {
         {composerContent}
       </MobileSheet>
     </>
+  )
+}
+
+export default function ActivityPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[40vh] bg-[#060b08]" />}>
+      <ActivityPageContent />
+    </Suspense>
   )
 }
