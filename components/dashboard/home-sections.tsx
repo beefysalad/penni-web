@@ -44,49 +44,50 @@ export function SkeletonHeroCard() {
 // --- Home Balance Hero ---
 
 export function HomeBalanceHero({
-  leftAfterRecurring,
+  cashOnHand,
+  thisMonthSpend,
   nextBillName,
   nextBillTiming,
   nextIncomeName,
   nextIncomeTiming,
 }: {
-  leftAfterRecurring: number
+  cashOnHand: number
+  thisMonthSpend: number
   nextBillName: string
   nextBillTiming: string
   nextIncomeName: string
   nextIncomeTiming: string
 }) {
-  const isNegative = leftAfterRecurring < 0
-
   return (
     <div className="rounded-[30px] border border-[#1b2a21] bg-[#111916] p-5 shadow-xl shadow-black/20">
-      <div className="flex flex-row items-start justify-between gap-3 sm:gap-4">
-        <div className="flex-1">
-          <p className="text-[13px] font-bold tracking-wider text-[#73827a] uppercase">
-            Left after recurring
-          </p>
-          <h2
-            className={cn(
-              'mt-2 max-w-full break-words text-[30px] leading-[0.95] font-bold tracking-tight sm:text-[38px]',
-              isNegative ? 'text-[#ff8a94]' : 'text-[#f4f7f5]'
-            )}
-          >
-            {formatCurrency(leftAfterRecurring)}
-          </h2>
-        </div>
-        <div
-          className={cn(
-            'rounded-full px-3 py-1.5 text-[10px] font-bold tracking-[1.5px] uppercase',
-            isNegative
-              ? 'bg-[#2c1a1f] text-[#ff8a94]'
-              : 'bg-[#1a2c1f] text-[#8bff62]'
-          )}
-        >
-          {isNegative ? 'Tight' : 'Planned'}
-        </div>
+      <div>
+        <p className="text-[13px] font-bold tracking-wider text-[#73827a] uppercase">
+          Cash on hand
+        </p>
+        <h2 className="mt-2 max-w-full break-words text-[30px] leading-[0.95] font-bold tracking-tight text-[#f4f7f5] sm:text-[38px]">
+          {formatCurrency(cashOnHand)}
+        </h2>
+        <p className="mt-2 text-[14px] font-medium text-[#7f8c86]">
+          Bank accounts, cash, and e-wallet balances available right now.
+        </p>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      <div className="mt-6 grid gap-3 md:grid-cols-3">
+        <div className="min-w-0 rounded-[24px] bg-[#1d1518] p-4 transition-colors hover:bg-[#221a1d]">
+          <div className="flex size-10 items-center justify-center rounded-full bg-[#2a1b20]">
+            <ArrowDownLeft className="size-5 text-[#ff8a94]" />
+          </div>
+          <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#93a19a] uppercase">
+            This month spent
+          </p>
+          <p className="mt-2 truncate text-[17px] leading-tight font-bold text-[#ff8a94]">
+            {formatCurrency(thisMonthSpend)}
+          </p>
+          <p className="mt-1 text-[13px] font-medium text-[#93a19a]">
+            Expenses posted this month so far.
+          </p>
+        </div>
+
         <div className="min-w-0 rounded-[24px] bg-[#18221d] p-4 transition-colors hover:bg-[#1c2822]">
           <div className="flex size-10 items-center justify-center rounded-full bg-[#1f3325]">
             <Calendar className="size-5 text-[#8bff62]" />

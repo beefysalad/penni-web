@@ -16,13 +16,13 @@ import { useTransactionsQuery } from '@/hooks/finance/use-transactions-query'
 import { usePlannedItemsQuery } from '@/hooks/finance/use-planned-items-query'
 import { useBudgetsQuery } from '@/hooks/finance/use-budgets-query'
 import {
+  getCashOnHand,
   getGreeting,
   getNextPlannedItem,
   getPlannedItemsForRestOfMonth,
-  getProjectedBalanceAfterRecurring,
+  getThisMonthSpend,
   getUpcomingTimingLabel,
 } from '@/lib/home-helpers'
-import { getNetWorth } from '@/lib/selectors'
 
 export default function DashboardPage() {
   const { user } = useUser()
@@ -66,12 +66,10 @@ export default function DashboardPage() {
     [plannedItems]
   )
 
-  const totalBalance = useMemo(() => getNetWorth(accounts), [accounts])
-
-  const leftAfterRecurring = useMemo(
-    () =>
-      getProjectedBalanceAfterRecurring(totalBalance, monthScopedPlannedItems),
-    [totalBalance, monthScopedPlannedItems]
+  const cashOnHand = useMemo(() => getCashOnHand(accounts), [accounts])
+  const thisMonthSpend = useMemo(
+    () => getThisMonthSpend(allTransactions),
+    [allTransactions]
   )
 
   const nextBill = useMemo(
@@ -138,11 +136,12 @@ export default function DashboardPage() {
 
       <div className="animate-in fade-in grid gap-6 px-4 py-6 md:px-6 lg:grid-cols-12 lg:px-8">
         <div className="lg:col-span-12">
-          {accountsQuery.isLoading || plannedItemsQuery.isLoading ? (
+          {accountsQuery.isLoading || plannedItemsQuery.isLoading || transactionsQuery.isLoading ? (
             <SkeletonHeroCard />
           ) : (
             <HomeBalanceHero
-              leftAfterRecurring={leftAfterRecurring}
+              cashOnHand={cashOnHand}
+              thisMonthSpend={thisMonthSpend}
               nextBillName={nextBill?.title ?? 'Nothing due'}
               nextBillTiming={nextBillTiming}
               nextIncomeName={nextIncome?.title ?? 'Nothing incoming'}
