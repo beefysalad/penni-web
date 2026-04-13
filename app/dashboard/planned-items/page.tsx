@@ -226,8 +226,8 @@ export default function PlannedItemsPage() {
   const expenseCategories = expenseCategoriesQuery.data ?? []
   const incomeCategories = incomeCategoriesQuery.data ?? []
   const categories = type === 'INCOME' ? incomeCategories : expenseCategories
-  const plannedItems = plannedItemsQuery.data ?? []
-  const transactions = transactionsQuery.data ?? []
+  const plannedItems = useMemo(() => plannedItemsQuery.data ?? [], [plannedItemsQuery.data])
+  const transactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data])
 
   useEffect(() => {
     if (!categoryId) return
@@ -382,7 +382,7 @@ export default function PlannedItemsPage() {
     ].filter((section) => section.items.length > 0)
 
     return (
-      <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
+      <div className="flex flex-col gap-6 pt-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">
@@ -404,22 +404,20 @@ export default function PlannedItemsPage() {
           </span>
         </div>
 
-        <div className="mt-5 rounded-[24px] border border-[#17211c] bg-[#111916]">
+        <div className="flex flex-col gap-6">
           {isLoading ? (
-            <div className="space-y-3 p-4">
-              <div className="h-16 animate-pulse rounded-[20px] bg-[#131b17]" />
-              <div className="h-16 animate-pulse rounded-[20px] bg-[#131b17]" />
+            <div className="space-y-3">
+              <div className="h-16 animate-pulse rounded-[24px] border border-[#17211c] bg-[#111916]" />
+              <div className="h-16 animate-pulse rounded-[24px] border border-[#17211c] bg-[#111916]" />
             </div>
           ) : sections.length > 0 ? (
-            <div className="divide-y divide-[#17211c]/60">
+            <div className="space-y-6">
               {sections.map((section) => (
-                <div key={section.title} className="p-3">
-                  <div className="px-2 pb-2">
-                    <p className="text-[11px] font-bold tracking-[1.8px] text-[#6f7c75] uppercase">
-                      {section.title}
-                    </p>
-                  </div>
-                  <div className="overflow-hidden rounded-[20px] border border-[#17211c] bg-[#0f1512]">
+                <div key={section.title} className="space-y-3">
+                  <p className="px-1 text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
+                    {section.title}
+                  </p>
+                  <div className="overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
                     {section.items.map((entry, index) => (
                       <PlannedItemRow
                         key={entry.item.id}
@@ -473,13 +471,11 @@ export default function PlannedItemsPage() {
               ))}
             </div>
           ) : (
-            <div className="p-4">
-              <FinanceEmptyState
-                icon={emptyState.icon}
-                title={emptyState.title}
-                description={emptyState.description}
-              />
-            </div>
+            <FinanceEmptyState
+              icon={emptyState.icon}
+              title={emptyState.title}
+              description={emptyState.description}
+            />
           )}
         </div>
       </div>
