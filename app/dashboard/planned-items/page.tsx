@@ -792,25 +792,24 @@ export default function PlannedItemsPage() {
       </DashboardHeaderShell>
 
       <div className="flex flex-col gap-6 px-4 pt-6 pb-28 md:px-6 lg:px-8">
-        <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-[12px] font-bold tracking-[1.8px] text-[#4a5650] uppercase">
-                Planning flow
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#93a19a]">
-                Keep recurring items readable. Open the composer only when you
-                want to add one.
-              </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
+              <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">Bills</span>
+              <span className="text-[15px] font-bold text-[#ff8a94]">{expenseItems.length}</span>
             </div>
-            <Button
-              onClick={() => setShowComposer((current) => !current)}
-              className="lg:self-stretch"
-            >
-              <Plus className="size-4" />
-              {showComposer ? 'Close composer' : 'Add recurring item'}
-            </Button>
+            <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
+              <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">Income</span>
+              <span className="text-[15px] font-bold text-[#41d6b2]">{incomeItems.length}</span>
+            </div>
           </div>
+          <Button
+            onClick={() => setShowComposer((current) => !current)}
+            className="rounded-full px-5"
+          >
+            <Plus className="size-4" />
+            {showComposer ? 'Close' : 'Add recurring item'}
+          </Button>
         </div>
 
         {showComposer ? (

@@ -496,32 +496,7 @@ export default function AccountsPage() {
           />
         )}
 
-        <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-[12px] font-bold tracking-[1.8px] text-[#4a5650] uppercase">
-                Wallet manager
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[#93a19a]">
-                Keep the page focused on your accounts. Open the composer only
-                when you need it.
-              </p>
-            </div>
-            <Button
-              onClick={() => setShowComposer((current) => !current)}
-              className="lg:self-stretch"
-            >
-              <Plus className="size-4" />
-              {showComposer ? 'Close composer' : 'New account'}
-            </Button>
-          </div>
-        </div>
-
-        {showComposer ? (
-          <div className="hidden lg:block">{composerContent}</div>
-        ) : null}
-
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="no-scrollbar flex flex-row items-center gap-2 overflow-x-auto pb-1">
             {ACCOUNT_FILTERS.map((filter) => (
               <button
@@ -537,8 +512,20 @@ export default function AccountsPage() {
               </button>
             ))}
           </div>
+          <Button
+            onClick={() => setShowComposer((current) => !current)}
+            className="rounded-full px-5"
+          >
+            <Plus className="size-4" />
+            {showComposer ? 'Close' : 'New account'}
+          </Button>
+        </div>
 
-          <div className="flex flex-col gap-3">
+        {showComposer ? (
+          <div className="hidden lg:block">{composerContent}</div>
+        ) : null}
+
+        <div className="flex flex-col gap-3">
             {accountsQuery.isLoading ? (
               <>
                 <AccountSkeletonCard />
@@ -609,7 +596,6 @@ export default function AccountsPage() {
               </div>
             )}
           </div>
-        </div>
       </div>
 
       <MobileSheet

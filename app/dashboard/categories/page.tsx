@@ -210,19 +210,24 @@ export default function CategoriesPage() {
       </DashboardHeaderShell>
 
       <div className="flex flex-col gap-6 px-4 pb-28 pt-6 md:px-6 lg:px-8">
-        <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-[12px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">Finance setup</p>
-              <p className="mt-1 text-[14px] font-medium text-[#93a19a]">
-                Create categories here and keep your reporting tidy.
-              </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
+              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#4a5650]">Expense</span>
+              <span className="text-[15px] font-bold text-[#ff8a94]">{expenseCategories.length}</span>
             </div>
-            <Button onClick={() => setShowComposer((current) => !current)} className="lg:self-stretch">
-              <Plus className="size-4" />
-              {showComposer ? 'Close composer' : 'New category'}
-            </Button>
+            <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
+              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#4a5650]">Income</span>
+              <span className="text-[15px] font-bold text-[#41d6b2]">{incomeCategories.length}</span>
+            </div>
           </div>
+          <Button
+            onClick={() => setShowComposer((current) => !current)}
+            className="rounded-full px-5"
+          >
+            <Plus className="size-4" />
+            {showComposer ? 'Close' : 'New category'}
+          </Button>
         </div>
 
         {showComposer ? <div className="hidden lg:block">{composerContent}</div> : null}

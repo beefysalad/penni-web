@@ -788,46 +788,44 @@ function ActivityPageContent() {
           </div>
         )}
 
-        <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="relative flex-1">
-                <Search className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-[#4a5650]" />
-                <input
-                  type="text"
-                  placeholder="Search activity..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-2xl border border-[#17211c] bg-[#131b17] py-3.5 pr-4 pl-11 text-[15px] text-[#f4f7f5] placeholder:text-[#4a5650] focus:border-[#2a3a31] focus:ring-1 focus:ring-[#2a3a31] focus:outline-none"
-                />
-              </div>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-[#4a5650]" />
+              <input
+                type="text"
+                placeholder="Search activity..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-2xl border border-[#17211c] bg-[#111916] py-3.5 pr-4 pl-11 text-[15px] text-[#f4f7f5] placeholder:text-[#4a5650] focus:border-[#2a3a31] focus:ring-1 focus:ring-[#2a3a31] focus:outline-none"
+              />
+            </div>
 
-              <Button
-                onClick={() => setShowComposer((current) => !current)}
-                className="lg:self-stretch"
+            <Button
+              onClick={() => setShowComposer((current) => !current)}
+              className="rounded-full px-5 lg:self-stretch"
+            >
+              <Plus className="size-4" />
+              {showComposer ? 'Close' : 'New transaction'}
+            </Button>
+          </div>
+
+          <div className="no-scrollbar flex flex-row items-center gap-2 overflow-x-auto pb-1">
+            {TYPE_FILTERS.map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setActiveTypeFilter(filter as TypeFilter)}
+                className="focus:outline-none"
               >
-                <Plus className="size-4" />
-                {showComposer ? 'Close composer' : 'New transaction'}
-              </Button>
-            </div>
-
-            <div className="no-scrollbar flex flex-row items-center gap-2 overflow-x-auto pb-1">
-              {TYPE_FILTERS.map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setActiveTypeFilter(filter as TypeFilter)}
-                  className="focus:outline-none"
-                >
-                  <Pill
-                    label={filter}
-                    variant={
-                      activeTypeFilter === filter ? 'selected' : 'default'
-                    }
-                    className="cursor-pointer transition-all active:scale-95"
-                  />
-                </button>
-              ))}
-            </div>
+                <Pill
+                  label={filter}
+                  variant={
+                    activeTypeFilter === filter ? 'selected' : 'default'
+                  }
+                  className="cursor-pointer transition-all active:scale-95"
+                />
+              </button>
+            ))}
           </div>
         </div>
 

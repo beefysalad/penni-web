@@ -147,7 +147,7 @@ export default function DebtsPage() {
   })
 
   const direction = useWatch({ control, name: 'direction' })
-  const debts = debtsQuery.data ?? []
+  const debts = useMemo(() => debtsQuery.data ?? [], [debtsQuery.data])
 
   const iOweDebts = useMemo(
     () => debts.filter((d) => d.direction === 'I_OWE' && d.status !== 'SETTLED'),
@@ -202,35 +202,43 @@ export default function DebtsPage() {
   const composer = (
     <form
       onSubmit={onSubmit}
-      className="rounded-[28px] border border-[#17211c] bg-[#111916] p-5"
+      className="rounded-[30px] border border-[#17211c] bg-[#111916] p-5"
     >
       <input type="hidden" {...register('direction')} />
 
-      <div className="rounded-[22px] bg-[#101a14] px-5 py-5 text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-[20px] bg-[#1f2217]">
-          <HandCoins className="size-6 text-[#d9f27c]" />
+      <div className="flex items-start justify-between gap-4 max-lg:hidden">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
+            {direction === 'I_OWE' ? 'Outstanding debt' : 'Incoming receivable'}
+          </p>
+          <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
+            {direction === 'I_OWE' ? 'Track what I owe' : 'Track what comes back'}
+          </h2>
+          <p className="mt-2 text-[14px] leading-relaxed font-medium text-[#7f8c86]">
+            {direction === 'I_OWE'
+              ? 'Capture money you still need to settle.'
+              : 'Capture money that other people still owe you.'}
+          </p>
         </div>
-        <h3 className="mt-4 text-[24px] font-semibold tracking-tight text-[#f4f7f5]">
-          {direction === 'I_OWE' ? 'Track what I owe' : 'Track what comes back'}
-        </h3>
-        <p className="mt-2 text-[15px] leading-6 text-[#7f8c86]">
-          {direction === 'I_OWE'
-            ? 'Capture money you still need to settle.'
-            : 'Capture money that other people still owe you.'}
-        </p>
+        <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">
+          <HandCoins className="size-5 text-[#8bff62]" />
+        </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-6 grid gap-3 max-lg:mt-0 sm:grid-cols-2">
         <button
           type="button"
           onClick={() => setValue('direction', 'I_OWE', { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
           className={cn(
             'rounded-[20px] border p-4 text-left transition',
-            direction === 'I_OWE' ? 'border-[#52d776] bg-[#111c16]' : 'border-[#17211c] bg-[#131b17]'
+            direction === 'I_OWE' ? 'border-[#ff8a94]/30 bg-[#2b1719]' : 'border-[#17211c] bg-[#131b17]'
           )}
         >
-          <p className="text-[15px] font-semibold text-[#f4f7f5]">Outstanding debt</p>
-          <p className="mt-1 text-xs leading-5 text-[#6d786f]">Money I still need to pay back.</p>
+          <div className="flex items-center gap-2">
+            <ArrowUpRight className="size-4 text-[#ff8a94]" />
+            <p className="text-[14px] font-semibold text-[#f4f7f5]">Outstanding debt</p>
+          </div>
+          <p className="mt-1 text-[12px] leading-5 text-[#6d786f]">Money I still need to pay back.</p>
         </button>
         <button
           type="button"
@@ -243,51 +251,55 @@ export default function DebtsPage() {
           }
           className={cn(
             'rounded-[20px] border p-4 text-left transition',
-            direction === 'OWED_TO_ME' ? 'border-[#52d776] bg-[#111c16]' : 'border-[#17211c] bg-[#131b17]'
+            direction === 'OWED_TO_ME' ? 'border-[#8bff62]/20 bg-[#16211b]' : 'border-[#17211c] bg-[#131b17]'
           )}
         >
-          <p className="text-[15px] font-semibold text-[#f4f7f5]">Incoming debt</p>
-          <p className="mt-1 text-xs leading-5 text-[#6d786f]">Money that should still come back.</p>
+          <div className="flex items-center gap-2">
+            <ArrowDownLeft className="size-4 text-[#8bff62]" />
+            <p className="text-[14px] font-semibold text-[#f4f7f5]">Incoming receivable</p>
+          </div>
+          <p className="mt-1 text-[12px] leading-5 text-[#6d786f]">Money that should still come back.</p>
         </button>
       </div>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">Title</Label>
-          <Input {...register('title')} placeholder="Laptop advance, Borrowed cash" />
+        <div className="space-y-2">
+          <Label htmlFor="debt-title">Title</Label>
+          <Input id="debt-title" {...register('title')} placeholder="Laptop advance, Borrowed cash" />
           <FormErrorMessage message={errors.title?.message} />
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">
+        <div className="space-y-2">
+          <Label htmlFor="debt-counterparty">
             {direction === 'I_OWE' ? 'I owe to' : 'Owed by'}
           </Label>
-          <Input {...register('counterpartyName')} placeholder="John, Sarah, Cooperative" />
+          <Input id="debt-counterparty" {...register('counterpartyName')} placeholder="John, Sarah, Cooperative" />
           <FormErrorMessage message={errors.counterpartyName?.message} />
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">Amount</Label>
-          <Input {...register('originalAmount')} inputMode="decimal" placeholder="10000.00" />
+        <div className="space-y-2">
+          <Label htmlFor="debt-amount">Amount</Label>
+          <Input id="debt-amount" {...register('originalAmount')} inputMode="decimal" placeholder="10000.00" />
           <FormErrorMessage message={errors.originalAmount?.message} />
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">Currency</Label>
-          <Input {...register('currency')} placeholder="PHP" maxLength={3} />
+        <div className="space-y-2">
+          <Label htmlFor="debt-currency">Currency</Label>
+          <Input id="debt-currency" {...register('currency')} placeholder="PHP" maxLength={3} />
           <FormErrorMessage message={errors.currency?.message} />
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">Due date</Label>
-          <Input {...register('dueDate')} type="date" />
+        <div className="space-y-2">
+          <Label htmlFor="debt-due">Due date</Label>
+          <Input id="debt-due" {...register('dueDate')} type="date" />
           <FormErrorMessage message={errors.dueDate?.message} />
         </div>
       </div>
 
-      <div className="mt-4 space-y-1.5">
-        <Label className="text-[10px] font-bold uppercase tracking-widest text-[#4a5650]">Notes</Label>
+      <div className="mt-4 space-y-2">
+        <Label htmlFor="debt-notes">Notes</Label>
         <Controller
           control={control}
           name="notes"
           render={({ field }) => (
             <textarea
+              id="debt-notes"
               value={field.value ?? ''}
               onChange={field.onChange}
               onBlur={field.onBlur}
@@ -306,16 +318,15 @@ export default function DebtsPage() {
         </div>
       ) : null}
 
-      <div className="mt-5 flex gap-2.5">
+      <div className="mt-6 flex gap-3">
         <Button
           type="submit"
-          className="flex-1 rounded-full"
+          className="flex-1"
           disabled={createDebtMutation.isPending || isSubmitting}
         >
-          <Plus className="size-4" />
           {direction === 'I_OWE' ? 'Save debt' : 'Save receivable'}
         </Button>
-        <Button type="button" variant="secondary" className="rounded-full" onClick={handleClose}>
+        <Button type="button" variant="secondary" onClick={handleClose}>
           Cancel
         </Button>
       </div>
@@ -333,12 +344,11 @@ export default function DebtsPage() {
         />
       </DashboardHeaderShell>
 
-      <div className="flex flex-col gap-5 px-4 pb-28 pt-6 md:px-6 lg:px-8">
+      <div className="animate-in fade-in flex flex-col gap-5 px-4 pb-28 pt-6 duration-500 md:px-6 lg:px-8">
 
-        {/* ── Summary chips + tab switcher ── */}
+        {/* ── Tab chips + action button ── */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            {/* I owe chip */}
             <button
               type="button"
               onClick={() => { setActiveTab('I_OWE'); setValue('direction', 'I_OWE') }}
@@ -354,7 +364,6 @@ export default function DebtsPage() {
               <span className="text-[14px] font-bold text-[#ff8a94]">{formatCurrency(iOweTotalBalance)}</span>
             </button>
 
-            {/* Owed to me chip */}
             <button
               type="button"
               onClick={() => { setActiveTab('OWED_TO_ME'); setValue('direction', 'OWED_TO_ME') }}
@@ -375,11 +384,15 @@ export default function DebtsPage() {
             className="rounded-full px-5"
             onClick={() => {
               setValue('direction', activeTab)
-              setShowComposer(true)
+              setShowComposer((c) => !c)
             }}
           >
             <Plus className="size-4" />
-            {activeTab === 'I_OWE' ? 'Add debt' : 'Add receivable'}
+            {showComposer
+              ? 'Close'
+              : activeTab === 'I_OWE'
+                ? 'Add debt'
+                : 'Add receivable'}
           </Button>
         </div>
 
@@ -397,21 +410,7 @@ export default function DebtsPage() {
 
         {/* ── Active tab list ── */}
         {activeDebts.length > 0 ? (
-          <div className="flex flex-col gap-2.5">
-            <div className="flex items-center justify-between px-0.5">
-              <h3 className="text-[11px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">
-                {activeTab === 'I_OWE' ? 'Outstanding' : 'Incoming'}
-              </h3>
-              <span
-                className="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                style={{
-                  color: activeTab === 'I_OWE' ? '#ff8a94' : '#8bff62',
-                  backgroundColor: activeTab === 'I_OWE' ? '#2b1719' : '#16211b',
-                }}
-              >
-                {activeDebts.length} open
-              </span>
-            </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {activeDebts.map((debt) => (
               <DebtRow
                 key={debt.id}
@@ -434,13 +433,7 @@ export default function DebtsPage() {
 
         {/* ── Settled list ── */}
         {settledDebts.length > 0 ? (
-          <div className="flex flex-col gap-2.5">
-            <div className="flex items-center justify-between px-0.5">
-              <h3 className="text-[11px] font-bold uppercase tracking-[1.8px] text-[#4a5650]">Settled</h3>
-              <span className="rounded-full bg-[#18221d] px-2.5 py-0.5 text-[10px] font-bold text-[#93a19a]">
-                {settledDebts.length} archived
-              </span>
-            </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {settledDebts.map((debt) => (
               <DebtRow
                 key={debt.id}
