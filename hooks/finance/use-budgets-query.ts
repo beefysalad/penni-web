@@ -2,15 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createBudget, deleteBudget, listBudgets, updateBudget, type CreateBudgetInput, type UpdateBudgetInput } from '@/api/finance/budgets.api'
-import { useAuthenticatedRequest } from '@/hooks/use-authenticated-request'
+import { useAuthenticatedRequest, useFinanceAuthState } from '@/hooks/use-authenticated-request'
 import { financeQueryKeys } from '@/hooks/finance/query-keys'
 
 export function useBudgetsQuery() {
   const authenticatedRequest = useAuthenticatedRequest()
+  const { isAuthReady } = useFinanceAuthState()
 
   return useQuery({
     queryKey: financeQueryKeys.budgets,
     queryFn: () => authenticatedRequest((token) => listBudgets(token)),
+    enabled: isAuthReady,
   })
 }
 

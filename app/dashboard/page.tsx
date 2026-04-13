@@ -138,7 +138,7 @@ export default function DashboardPage() {
 
       <div className="animate-in fade-in grid gap-6 px-4 py-6 md:px-6 lg:grid-cols-12 lg:px-8">
         <div className="lg:col-span-12">
-          {accountsQuery.isLoading ? (
+          {accountsQuery.isLoading || plannedItemsQuery.isLoading ? (
             <SkeletonHeroCard />
           ) : (
             <HomeBalanceHero

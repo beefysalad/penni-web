@@ -10,16 +10,18 @@ import {
   type CreatePlannedItemInput,
   type ListPlannedItemsParams,
 } from '@/api/finance/planned-items.api'
-import { useAuthenticatedRequest } from '@/hooks/use-authenticated-request'
+import { useAuthenticatedRequest, useFinanceAuthState } from '@/hooks/use-authenticated-request'
 import { financeQueryKeys } from '@/hooks/finance/query-keys'
 import type { PlannedItem } from '@/lib/finance.types'
 
 export function usePlannedItemsQuery(params?: ListPlannedItemsParams) {
   const authenticatedRequest = useAuthenticatedRequest()
+  const { isAuthReady } = useFinanceAuthState()
 
   return useQuery({
     queryKey: financeQueryKeys.plannedItems(params),
     queryFn: () => authenticatedRequest((token) => listPlannedItems(token, params)),
+    enabled: isAuthReady,
   })
 }
 

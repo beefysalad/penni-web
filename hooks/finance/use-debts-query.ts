@@ -2,15 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createDebt, deleteDebt, listDebts, type CreateDebtInput } from '@/api/finance/debts.api'
-import { useAuthenticatedRequest } from '@/hooks/use-authenticated-request'
+import { useAuthenticatedRequest, useFinanceAuthState } from '@/hooks/use-authenticated-request'
 import { financeQueryKeys } from '@/hooks/finance/query-keys'
 
 export function useDebtsQuery() {
   const authenticatedRequest = useAuthenticatedRequest()
+  const { isAuthReady } = useFinanceAuthState()
 
   return useQuery({
     queryKey: financeQueryKeys.debts,
     queryFn: () => authenticatedRequest((token) => listDebts(token)),
+    enabled: isAuthReady,
   })
 }
 

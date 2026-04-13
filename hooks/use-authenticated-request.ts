@@ -3,6 +3,14 @@
 import { useAuth } from '@clerk/nextjs'
 import { useCallback } from 'react'
 
+export function useFinanceAuthState() {
+  const { isLoaded, isSignedIn } = useAuth()
+
+  return {
+    isAuthReady: isLoaded && isSignedIn,
+  }
+}
+
 export function useAuthenticatedRequest() {
   const { getToken, isLoaded, isSignedIn } = useAuth()
 

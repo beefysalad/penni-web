@@ -9,16 +9,18 @@ import {
   type CreateTransactionInput,
   type CreateTransferInput,
 } from '@/api/finance/transactions.api'
-import { useAuthenticatedRequest } from '@/hooks/use-authenticated-request'
+import { useAuthenticatedRequest, useFinanceAuthState } from '@/hooks/use-authenticated-request'
 import { financeQueryKeys } from '@/hooks/finance/query-keys'
 import type { Transaction } from '@/lib/finance.types'
 
 export function useTransactionsQuery() {
   const authenticatedRequest = useAuthenticatedRequest()
+  const { isAuthReady } = useFinanceAuthState()
 
   return useQuery({
     queryKey: financeQueryKeys.transactions,
     queryFn: () => authenticatedRequest((token) => listTransactions(token)),
+    enabled: isAuthReady,
   })
 }
 
