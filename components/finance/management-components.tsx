@@ -141,59 +141,64 @@ export function PlannedItemRow({
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-4 py-4',
+        'flex flex-col gap-2 px-4 py-4',
         !isLast && 'border-b border-[#17211c]/60'
       )}
     >
-      <div
-        className={cn(
-          'flex size-11 items-center justify-center rounded-[14px]',
-          isExpense ? 'bg-[#241719]' : 'bg-[#16211b]'
-        )}
-      >
-        {isExpense ? (
-          <ArrowDownLeft className="size-4 text-[#ff8a94]" />
-        ) : (
-          <ArrowUpRight className="size-4 text-[#41d6b2]" />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-bold text-[#f4f7f5]">
-          {item.title}
-        </p>
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] font-medium text-[#7f8c86]">
-          <span>
-            {formatCompactDate(
-              scheduledFor ?? item.nextOccurrenceAt ?? item.startDate
-            )}
-          </span>
-          <span className="text-[#314238]">•</span>
-          <span>{formatRecurrenceLabel(item)}</span>
-          {statusLabel ? (
-            <>
-              <span className="text-[#314238]">•</span>
-              <span
-                className={cn(
-                  'font-bold tracking-[1.2px] uppercase',
-                  statusTone === 'danger'
-                    ? 'text-[#ff8a94]'
-                    : statusTone === 'success'
-                      ? 'text-[#41d6b2]'
-                      : 'text-[#ffc857]'
-                )}
-              >
-                {statusLabel}
-              </span>
-            </>
+      {/* Top row: icon + text */}
+      <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            'flex size-10 shrink-0 items-center justify-center rounded-[14px]',
+            isExpense ? 'bg-[#241719]' : 'bg-[#16211b]'
+          )}
+        >
+          {isExpense ? (
+            <ArrowDownLeft className="size-4 text-[#ff8a94]" />
+          ) : (
+            <ArrowUpRight className="size-4 text-[#41d6b2]" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-bold text-[#f4f7f5]">
+            {item.title}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-[#7f8c86]">
+            <span>
+              {formatCompactDate(
+                scheduledFor ?? item.nextOccurrenceAt ?? item.startDate
+              )}
+            </span>
+            <span className="text-[#314238]">·</span>
+            <span>{formatRecurrenceLabel(item)}</span>
+            {statusLabel ? (
+              <>
+                <span className="text-[#314238]">·</span>
+                <span
+                  className={cn(
+                    'font-bold tracking-[1.2px] uppercase',
+                    statusTone === 'danger'
+                      ? 'text-[#ff8a94]'
+                      : statusTone === 'success'
+                        ? 'text-[#41d6b2]'
+                        : 'text-[#ffc857]'
+                  )}
+                >
+                  {statusLabel}
+                </span>
+              </>
+            ) : null}
+          </div>
+          {helperText ? (
+            <p className="mt-1 text-[12px] font-medium text-[#93a19a]">
+              {helperText}
+            </p>
           ) : null}
         </div>
-        {helperText ? (
-          <p className="mt-1 text-[12px] font-medium text-[#93a19a]">
-            {helperText}
-          </p>
-        ) : null}
       </div>
-      <div className="flex items-center gap-3">
+
+      {/* Bottom row: amount + actions */}
+      <div className="flex items-center justify-between gap-2 pl-[52px]">
         <p
           className={cn(
             'text-[15px] font-bold',

@@ -59,10 +59,10 @@ export default function BudgetsPage() {
 
   const categoryId = useWatch({ control, name: 'categoryId' })
 
-  const budgets = budgetsQuery.data ?? []
-  const categories = categoriesQuery.data ?? []
-  const transactions = transactionsQuery.data ?? []
-  const today = new Date()
+  const budgets = useMemo(() => budgetsQuery.data ?? [], [budgetsQuery.data])
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data])
+  const transactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data])
+  const today = useMemo(() => new Date(), [])
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>()

@@ -396,7 +396,7 @@ export default function PlannedItemsPage() {
           </div>
           <span
             className={cn(
-              'rounded-full px-3 py-1 text-[11px] font-bold',
+              'shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-bold',
               accentClassName
             )}
           >
