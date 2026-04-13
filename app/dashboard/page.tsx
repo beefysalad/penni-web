@@ -1,7 +1,7 @@
 'use client'
 
 import { useUser } from '@clerk/nextjs'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
 import {
@@ -26,6 +26,7 @@ import {
 
 export default function DashboardPage() {
   const { user } = useUser()
+  const [now, setNow] = useState(() => new Date())
   const accountsQuery = useAccountsQuery()
   const plannedItemsQuery = usePlannedItemsQuery({ isActive: true })
   const transactionsQuery = useTransactionsQuery()
@@ -122,6 +123,22 @@ export default function DashboardPage() {
         .reduce((sum, transaction) => sum + Number(transaction.amount), 0),
     [recentTransactions]
   )
+  const dashboardTimeLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      }).format(now),
+    [now]
+  )
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(timer)
+  }, [])
 
   return (
     <>
@@ -129,6 +146,7 @@ export default function DashboardPage() {
         <AppPageHeader
           eyebrow="Dashboard"
           title={`${getGreeting()}, ${firstName}!`}
+          meta={dashboardTimeLabel}
           subtitle="Track balances, upcoming bills, and the categories shaping your month."
           inverted
         />

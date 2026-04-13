@@ -62,25 +62,39 @@ export function HomeBalanceHero({
     <div className="rounded-[30px] border border-[#1b2a21] bg-[#111916] p-5 shadow-xl shadow-black/20">
       <div>
         <p className="text-[13px] font-bold tracking-wider text-[#73827a] uppercase">
-          Cash on hand
+          Total Balance
         </p>
         <h2 className="mt-2 max-w-full break-words text-[30px] leading-[0.95] font-bold tracking-tight text-[#f4f7f5] sm:text-[38px]">
           {formatCurrency(cashOnHand)}
         </h2>
         <p className="mt-2 text-[14px] font-medium text-[#7f8c86]">
-          Bank accounts, cash, and e-wallet balances available right now.
+          Combined balance across all your accounts and wallets.
         </p>
       </div>
 
       <div className="mt-6 grid gap-3 md:grid-cols-3">
-        <div className="min-w-0 rounded-[24px] bg-[#1d1518] p-4 transition-colors hover:bg-[#221a1d]">
-          <div className="flex size-10 items-center justify-center rounded-full bg-[#2a1b20]">
-            <ArrowDownLeft className="size-5 text-[#ff8a94]" />
+        <div className={cn(
+          'min-w-0 rounded-[24px] p-4 transition-colors',
+          thisMonthSpend === 0
+            ? 'bg-[#18221d] hover:bg-[#1c2822]'
+            : 'bg-[#1d1518] hover:bg-[#221a1d]'
+        )}>
+          <div className={cn(
+            'flex size-10 items-center justify-center rounded-full',
+            thisMonthSpend === 0 ? 'bg-[#1f3325]' : 'bg-[#2a1b20]'
+          )}>
+            <ArrowDownLeft className={cn(
+              'size-5',
+              thisMonthSpend === 0 ? 'text-[#8bff62]' : 'text-[#ff8a94]'
+            )} />
           </div>
           <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#93a19a] uppercase">
             This month spent
           </p>
-          <p className="mt-2 truncate text-[17px] leading-tight font-bold text-[#ff8a94]">
+          <p className={cn(
+            'mt-2 truncate text-[17px] leading-tight font-bold',
+            thisMonthSpend === 0 ? 'text-[#8bff62]' : 'text-[#ff8a94]'
+          )}>
             {formatCurrency(thisMonthSpend)}
           </p>
           <p className="mt-1 text-[13px] font-medium text-[#93a19a]">

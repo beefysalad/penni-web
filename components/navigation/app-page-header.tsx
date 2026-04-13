@@ -4,6 +4,7 @@ import { useUser } from '@clerk/nextjs'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import Image from 'next/image'
+import { Clock } from 'lucide-react'
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -12,6 +13,7 @@ function cn(...inputs: ClassValue[]) {
 type AppPageHeaderProps = {
   eyebrow?: string
   title: string
+  meta?: string
   subtitle?: string
   inverted?: boolean
 }
@@ -19,6 +21,7 @@ type AppPageHeaderProps = {
 export function AppPageHeader({
   eyebrow,
   title,
+  meta,
   subtitle,
   inverted = false,
 }: AppPageHeaderProps) {
@@ -45,6 +48,73 @@ export function AppPageHeader({
         >
           {title}
         </h1>
+        {meta && (
+          <div className="mt-2.5 flex items-center gap-2">
+            <div
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1',
+                inverted
+                  ? 'border-[#8bff62]/15 bg-[#8bff62]/8'
+                  : 'border-[#3d4f62]/40 bg-[#1a2230]/60'
+              )}
+            >
+              <Clock
+                className={cn(
+                  'size-3',
+                  inverted ? 'text-[#8bff62]/70' : 'text-[#5a7a90]'
+                )}
+              />
+              {/* Split the meta string on the last space before the time part to visually separate date from time */}
+              {(() => {
+                // Expected format: "Sun, Apr 13, 3:10 PM"
+                // Split after the day number (last comma) to isolate time
+                const commaIdx = meta.lastIndexOf(',')
+                if (commaIdx === -1) {
+                  return (
+                    <span
+                      className={cn(
+                        'text-[11.5px] font-semibold tracking-wide',
+                        inverted ? 'text-[#b6c2bb]' : 'text-[#7b8499]'
+                      )}
+                    >
+                      {meta}
+                    </span>
+                  )
+                }
+                const datePart = meta.slice(0, commaIdx)
+                const timePart = meta.slice(commaIdx + 1).trim()
+                return (
+                  <>
+                    <span
+                      className={cn(
+                        'text-[11.5px] font-semibold tracking-wide',
+                        inverted ? 'text-[#b6c2bb]' : 'text-[#7b8499]'
+                      )}
+                    >
+                      {datePart}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[10px] font-bold',
+                        inverted ? 'text-[#8bff62]/50' : 'text-[#4d6070]/80'
+                      )}
+                    >
+                      ·
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[11.5px] font-bold',
+                        inverted ? 'text-[#8bff62]' : 'text-[#5a7a90]'
+                      )}
+                    >
+                      {timePart}
+                    </span>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+        )}
         {subtitle && (
           <p
             className={cn(
