@@ -1,29 +1,28 @@
 'use client'
 
-import { useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
-import { toast } from 'sonner'
+import type { FeedbackTypeApi, MoodApi } from '@/api/finance/feedback.api'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
 import { Button } from '@/components/ui/button'
 import FormErrorMessage from '@/components/ui/form-error-message'
 import { useCreateFeedbackMutation } from '@/hooks/finance/use-feedback-query'
+import { handleApiError } from '@/lib/error-handler'
 import { cn } from '@/lib/utils'
 import {
-  MessageSquare,
+  Angry,
   Bug,
-  Lightbulb,
+  Frown,
   Heart,
-  Star,
+  Lightbulb,
+  Meh,
+  MessageSquare,
+  PartyPopper,
   Send,
   Smile,
-  Meh,
-  Frown,
-  Angry,
-  PartyPopper,
 } from 'lucide-react'
-import { handleApiError } from '@/lib/error-handler'
-import type { FeedbackTypeApi, MoodApi } from '@/api/finance/feedback.api'
+import { useForm, useWatch } from 'react-hook-form'
+import { toast } from 'sonner'
+import { StarRating } from './_components/star-rating'
 
 const FEEDBACK_TYPES = [
   {
@@ -424,8 +423,7 @@ export default function FeedbackPage() {
                 {...register('message', {
                   required: 'Please add a message before sending feedback.',
                   validate: (value) =>
-                    (value.trim().length > 0 &&
-                      value.length <= charLimit) ||
+                    (value.trim().length > 0 && value.length <= charLimit) ||
                     (value.length > charLimit
                       ? 'Feedback message is too long.'
                       : 'Please add a message before sending feedback.'),
@@ -506,7 +504,7 @@ export default function FeedbackPage() {
           <StarRating
             value={mood}
             onChange={(value) => {
-              setValue('mood', value, {
+              setValue('mood', value as Mood, {
                 shouldDirty: true,
                 shouldTouch: true,
               })
@@ -529,60 +527,5 @@ export default function FeedbackPage() {
         <FormErrorMessage message={errors.root?.message} />
       </form>
     </>
-  )
-}
-
-function StarRating({
-  value,
-  onChange,
-}: {
-  value: Mood | null
-  onChange: (value: Mood) => void
-}) {
-  const [hovered, setHovered] = useState<number | null>(null)
-
-  const display = hovered ?? value
-
-  const labels: Record<number, string> = {
-    1: 'Poor',
-    2: 'Fair',
-    3: 'Good',
-    4: 'Great',
-    5: 'Excellent',
-  }
-
-  return (
-    <div className="mt-5">
-      <div className="flex items-center gap-3">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type="button"
-            onMouseEnter={() => setHovered(star)}
-            onMouseLeave={() => setHovered(null)}
-            onClick={() => onChange(star as Mood)}
-            className="group transition-transform duration-100 hover:scale-110 active:scale-90"
-            aria-label={`Rate ${star} stars`}
-          >
-            <Star
-              className="size-9 transition-colors duration-150"
-              style={{
-                color:
-                  display !== null && star <= display ? '#ffc857' : '#1f2e28',
-                fill:
-                  display !== null && star <= display
-                    ? '#ffc857'
-                    : 'transparent',
-              }}
-            />
-          </button>
-        ))}
-        {display !== null ? (
-          <span className="ml-2 text-[13px] font-bold text-[#ffc857]">
-            {labels[display]}
-          </span>
-        ) : null}
-      </div>
-    </div>
   )
 }

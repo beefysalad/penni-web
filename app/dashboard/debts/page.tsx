@@ -1,14 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Controller, useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { toast } from 'sonner'
-import { ArrowDownLeft, ArrowUpRight, HandCoins, Plus, Trash2 } from 'lucide-react'
+import { FinanceEmptyState } from '@/components/finance/management-components'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
-import { FinanceEmptyState } from '@/components/finance/management-components'
 import { Button } from '@/components/ui/button'
 import FormErrorMessage from '@/components/ui/form-error-message'
 import { Input } from '@/components/ui/input'
@@ -19,16 +13,25 @@ import {
   useDebtsQuery,
   useDeleteDebtMutation,
 } from '@/hooks/finance/use-debts-query'
-import type { Debt, DebtDirection } from '@/lib/finance.types'
-import { formatCurrency, formatShortDate } from '@/lib/formatters'
+import type { DebtDirection } from '@/lib/finance.types'
+import { formatCurrency } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
-
-// ─── Schema ────────────────────────────────────────────────────────────────────
+import { zodResolver } from '@hookform/resolvers/zod'
+import { ArrowDownLeft, ArrowUpRight, HandCoins, Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Controller, useForm, useWatch } from 'react-hook-form'
+import { toast } from 'sonner'
+import { z } from 'zod'
+import { DebtRow } from './_components/debt-row'
 
 const debtFormSchema = z.object({
   direction: z.enum(['I_OWE', 'OWED_TO_ME']),
   title: z.string().trim().min(1, 'Add a debt title.').max(120),
-  counterpartyName: z.string().trim().min(1, 'Add a person or counterparty.').max(120),
+  counterpartyName: z
+    .string()
+    .trim()
+    .min(1, 'Add a person or counterparty.')
+    .max(120),
   originalAmount: z
     .string()
     .trim()
@@ -54,78 +57,6 @@ const DEFAULT_VALUES: DebtForm = {
   notes: '',
 }
 
-// ─── Debt row ──────────────────────────────────────────────────────────────────
-
-function DebtRow({ debt, onDelete }: { debt: Debt; onDelete: () => void }) {
-  const progress =
-    Number(debt.originalAmount) > 0
-      ? Math.min((Number(debt.currentBalance) / Number(debt.originalAmount)) * 100, 100)
-      : 0
-
-  const isOwedToMe = debt.direction === 'OWED_TO_ME'
-  const isSettled = debt.status === 'SETTLED'
-  const accentColor = isSettled ? '#93a19a' : isOwedToMe ? '#8bff62' : '#ff8a94'
-  const pillBg = isSettled ? '#18221d' : isOwedToMe ? '#1a2c1f' : '#2b1719'
-  const pillLabel = isSettled ? 'Settled' : isOwedToMe ? 'Owed to me' : 'I owe'
-
-  return (
-    <div className="flex flex-col gap-3 rounded-[20px] border border-[#17211c] bg-[#0f1512] p-4">
-      {/* Top row */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-[15px] font-bold text-[#f4f7f5]">{debt.title}</p>
-            <span
-              className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[1.2px]"
-              style={{ color: accentColor, backgroundColor: pillBg }}
-            >
-              {pillLabel}
-            </span>
-          </div>
-          <p className="mt-0.5 text-[11px] font-medium text-[#4a5650]">
-            {debt.counterpartyName}
-            {debt.dueDate ? (
-              <span className="ml-2 text-[#7f8c86]">· Due {formatShortDate(debt.dueDate)}</span>
-            ) : null}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
-          aria-label={`Delete ${debt.title}`}
-        >
-          <Trash2 className="size-3.5 text-[#ff8a94]" />
-        </button>
-      </div>
-
-      {/* Progress bar */}
-      <div className="h-1.5 overflow-hidden rounded-full bg-[#1a2c1f]">
-        <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${progress}%`, backgroundColor: accentColor }}
-        />
-      </div>
-
-      {/* Bottom row */}
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[12px] font-semibold" style={{ color: accentColor }}>
-          {formatCurrency(debt.currentBalance, debt.currency)}
-          <span className="ml-1 font-normal text-[#4a5650]">
-            remaining of {formatCurrency(debt.originalAmount, debt.currency)}
-          </span>
-        </p>
-      </div>
-
-      {debt.notes ? (
-        <p className="text-[12px] leading-5 text-[#7f8c86]">{debt.notes}</p>
-      ) : null}
-    </div>
-  )
-}
-
-// ─── Page ──────────────────────────────────────────────────────────────────────
-
 export default function DebtsPage() {
   const debtsQuery = useDebtsQuery()
   const createDebtMutation = useCreateDebtMutation()
@@ -150,14 +81,21 @@ export default function DebtsPage() {
   const debts = useMemo(() => debtsQuery.data ?? [], [debtsQuery.data])
 
   const iOweDebts = useMemo(
-    () => debts.filter((d) => d.direction === 'I_OWE' && d.status !== 'SETTLED'),
+    () =>
+      debts.filter((d) => d.direction === 'I_OWE' && d.status !== 'SETTLED'),
     [debts]
   )
   const owedToMeDebts = useMemo(
-    () => debts.filter((d) => d.direction === 'OWED_TO_ME' && d.status !== 'SETTLED'),
+    () =>
+      debts.filter(
+        (d) => d.direction === 'OWED_TO_ME' && d.status !== 'SETTLED'
+      ),
     [debts]
   )
-  const settledDebts = useMemo(() => debts.filter((d) => d.status === 'SETTLED'), [debts])
+  const settledDebts = useMemo(
+    () => debts.filter((d) => d.status === 'SETTLED'),
+    [debts]
+  )
 
   const iOweTotalBalance = useMemo(
     () => iOweDebts.reduce((sum, d) => sum + Number(d.currentBalance), 0),
@@ -169,7 +107,10 @@ export default function DebtsPage() {
   )
 
   const activeDebts = activeTab === 'I_OWE' ? iOweDebts : owedToMeDebts
-  const isEmpty = iOweDebts.length === 0 && owedToMeDebts.length === 0 && settledDebts.length === 0
+  const isEmpty =
+    iOweDebts.length === 0 &&
+    owedToMeDebts.length === 0 &&
+    settledDebts.length === 0
 
   const handleClose = () => {
     reset(DEFAULT_VALUES)
@@ -184,7 +125,9 @@ export default function DebtsPage() {
         counterpartyName: values.counterpartyName.trim(),
         originalAmount: Number(values.originalAmount).toFixed(2),
         currency: values.currency.trim().toUpperCase(),
-        ...(values.dueDate ? { dueDate: new Date(`${values.dueDate}T00:00:00`).toISOString() } : {}),
+        ...(values.dueDate
+          ? { dueDate: new Date(`${values.dueDate}T00:00:00`).toISOString() }
+          : {}),
         ...(values.notes?.trim() ? { notes: values.notes.trim() } : {}),
       })
       toast.success('Debt saved.')
@@ -192,12 +135,11 @@ export default function DebtsPage() {
     } catch (error) {
       setError('root', {
         type: 'server',
-        message: error instanceof Error ? error.message : 'Could not save debt.',
+        message:
+          error instanceof Error ? error.message : 'Could not save debt.',
       })
     }
   })
-
-  // ── Composer ─────────────────────────────────────────────────────────────────
 
   const composer = (
     <form
@@ -208,11 +150,13 @@ export default function DebtsPage() {
 
       <div className="flex items-start justify-between gap-4 max-lg:hidden">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[2px] text-[#4a5650]">
+          <p className="text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
             {direction === 'I_OWE' ? 'Outstanding debt' : 'Incoming receivable'}
           </p>
           <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#f4f7f5]">
-            {direction === 'I_OWE' ? 'Track what I owe' : 'Track what comes back'}
+            {direction === 'I_OWE'
+              ? 'Track what I owe'
+              : 'Track what comes back'}
           </h2>
           <p className="mt-2 text-[14px] leading-relaxed font-medium text-[#7f8c86]">
             {direction === 'I_OWE'
@@ -228,17 +172,29 @@ export default function DebtsPage() {
       <div className="mt-6 grid gap-3 max-lg:mt-0 sm:grid-cols-2">
         <button
           type="button"
-          onClick={() => setValue('direction', 'I_OWE', { shouldDirty: true, shouldTouch: true, shouldValidate: true })}
+          onClick={() =>
+            setValue('direction', 'I_OWE', {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            })
+          }
           className={cn(
             'rounded-[20px] border p-4 text-left transition',
-            direction === 'I_OWE' ? 'border-[#ff8a94]/30 bg-[#2b1719]' : 'border-[#17211c] bg-[#131b17]'
+            direction === 'I_OWE'
+              ? 'border-[#ff8a94]/30 bg-[#2b1719]'
+              : 'border-[#17211c] bg-[#131b17]'
           )}
         >
           <div className="flex items-center gap-2">
             <ArrowUpRight className="size-4 text-[#ff8a94]" />
-            <p className="text-[14px] font-semibold text-[#f4f7f5]">Outstanding debt</p>
+            <p className="text-[14px] font-semibold text-[#f4f7f5]">
+              Outstanding debt
+            </p>
           </div>
-          <p className="mt-1 text-[12px] leading-5 text-[#6d786f]">Money I still need to pay back.</p>
+          <p className="mt-1 text-[12px] leading-5 text-[#6d786f]">
+            Money I still need to pay back.
+          </p>
         </button>
         <button
           type="button"
@@ -251,38 +207,62 @@ export default function DebtsPage() {
           }
           className={cn(
             'rounded-[20px] border p-4 text-left transition',
-            direction === 'OWED_TO_ME' ? 'border-[#8bff62]/20 bg-[#16211b]' : 'border-[#17211c] bg-[#131b17]'
+            direction === 'OWED_TO_ME'
+              ? 'border-[#8bff62]/20 bg-[#16211b]'
+              : 'border-[#17211c] bg-[#131b17]'
           )}
         >
           <div className="flex items-center gap-2">
             <ArrowDownLeft className="size-4 text-[#8bff62]" />
-            <p className="text-[14px] font-semibold text-[#f4f7f5]">Incoming receivable</p>
+            <p className="text-[14px] font-semibold text-[#f4f7f5]">
+              Incoming receivable
+            </p>
           </div>
-          <p className="mt-1 text-[12px] leading-5 text-[#6d786f]">Money that should still come back.</p>
+          <p className="mt-1 text-[12px] leading-5 text-[#6d786f]">
+            Money that should still come back.
+          </p>
         </button>
       </div>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="debt-title">Title</Label>
-          <Input id="debt-title" {...register('title')} placeholder="Laptop advance, Borrowed cash" />
+          <Input
+            id="debt-title"
+            {...register('title')}
+            placeholder="Laptop advance, Borrowed cash"
+          />
           <FormErrorMessage message={errors.title?.message} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="debt-counterparty">
             {direction === 'I_OWE' ? 'I owe to' : 'Owed by'}
           </Label>
-          <Input id="debt-counterparty" {...register('counterpartyName')} placeholder="John, Sarah, Cooperative" />
+          <Input
+            id="debt-counterparty"
+            {...register('counterpartyName')}
+            placeholder="John, Sarah, Cooperative"
+          />
           <FormErrorMessage message={errors.counterpartyName?.message} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="debt-amount">Amount</Label>
-          <Input id="debt-amount" {...register('originalAmount')} inputMode="decimal" placeholder="10000.00" />
+          <Input
+            id="debt-amount"
+            {...register('originalAmount')}
+            inputMode="decimal"
+            placeholder="10000.00"
+          />
           <FormErrorMessage message={errors.originalAmount?.message} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="debt-currency">Currency</Label>
-          <Input id="debt-currency" {...register('currency')} placeholder="PHP" maxLength={3} />
+          <Input
+            id="debt-currency"
+            {...register('currency')}
+            placeholder="PHP"
+            maxLength={3}
+          />
           <FormErrorMessage message={errors.currency?.message} />
         </div>
         <div className="space-y-2">
@@ -304,7 +284,7 @@ export default function DebtsPage() {
               onChange={field.onChange}
               onBlur={field.onBlur}
               rows={3}
-              className="min-h-[90px] w-full rounded-[18px] border border-[#17211c] bg-[#131b17] px-4 py-3 text-[14px] font-medium text-[#f4f7f5] outline-none placeholder:text-[#536159] focus:border-[#8bff62]/35 transition"
+              className="min-h-[90px] w-full rounded-[18px] border border-[#17211c] bg-[#131b17] px-4 py-3 text-[14px] font-medium text-[#f4f7f5] transition outline-none placeholder:text-[#536159] focus:border-[#8bff62]/35"
               placeholder="Optional reminders, payment notes…"
             />
           )}
@@ -344,14 +324,15 @@ export default function DebtsPage() {
         />
       </DashboardHeaderShell>
 
-      <div className="animate-in fade-in flex flex-col gap-5 px-4 pb-28 pt-6 duration-500 md:px-6 lg:px-8">
-
-        {/* ── Tab chips + action button ── */}
+      <div className="animate-in fade-in flex flex-col gap-5 px-4 pt-6 pb-28 duration-500 md:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => { setActiveTab('I_OWE'); setValue('direction', 'I_OWE') }}
+              onClick={() => {
+                setActiveTab('I_OWE')
+                setValue('direction', 'I_OWE')
+              }}
               className={cn(
                 'flex items-center gap-2 rounded-full border px-4 py-2 transition',
                 activeTab === 'I_OWE'
@@ -360,13 +341,20 @@ export default function DebtsPage() {
               )}
             >
               <ArrowUpRight className="size-3.5 text-[#ff8a94]" />
-              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#4a5650]">I owe</span>
-              <span className="text-[14px] font-bold text-[#ff8a94]">{formatCurrency(iOweTotalBalance)}</span>
+              <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">
+                I owe
+              </span>
+              <span className="text-[14px] font-bold text-[#ff8a94]">
+                {formatCurrency(iOweTotalBalance)}
+              </span>
             </button>
 
             <button
               type="button"
-              onClick={() => { setActiveTab('OWED_TO_ME'); setValue('direction', 'OWED_TO_ME') }}
+              onClick={() => {
+                setActiveTab('OWED_TO_ME')
+                setValue('direction', 'OWED_TO_ME')
+              }}
               className={cn(
                 'flex items-center gap-2 rounded-full border px-4 py-2 transition',
                 activeTab === 'OWED_TO_ME'
@@ -375,8 +363,12 @@ export default function DebtsPage() {
               )}
             >
               <ArrowDownLeft className="size-3.5 text-[#8bff62]" />
-              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#4a5650]">Owed to me</span>
-              <span className="text-[14px] font-bold text-[#8bff62]">{formatCurrency(owedToMeTotalBalance)}</span>
+              <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">
+                Owed to me
+              </span>
+              <span className="text-[14px] font-bold text-[#8bff62]">
+                {formatCurrency(owedToMeTotalBalance)}
+              </span>
             </button>
           </div>
 
@@ -396,10 +388,10 @@ export default function DebtsPage() {
           </Button>
         </div>
 
-        {/* ── Desktop composer ── */}
-        {showComposer ? <div className="hidden lg:block">{composer}</div> : null}
+        {showComposer ? (
+          <div className="hidden lg:block">{composer}</div>
+        ) : null}
 
-        {/* ── Empty state ── */}
         {isEmpty ? (
           <FinanceEmptyState
             icon={HandCoins}
@@ -408,7 +400,6 @@ export default function DebtsPage() {
           />
         ) : null}
 
-        {/* ── Active tab list ── */}
         {activeDebts.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {activeDebts.map((debt) => (
@@ -422,7 +413,9 @@ export default function DebtsPage() {
         ) : debts.length > 0 ? (
           <FinanceEmptyState
             icon={HandCoins}
-            title={activeTab === 'I_OWE' ? 'No outstanding debt' : 'No incoming debt'}
+            title={
+              activeTab === 'I_OWE' ? 'No outstanding debt' : 'No incoming debt'
+            }
             description={
               activeTab === 'I_OWE'
                 ? 'Nothing marked as money you still owe.'
@@ -431,7 +424,6 @@ export default function DebtsPage() {
           />
         ) : null}
 
-        {/* ── Settled list ── */}
         {settledDebts.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {settledDebts.map((debt) => (
@@ -445,7 +437,6 @@ export default function DebtsPage() {
         ) : null}
       </div>
 
-      {/* ── Mobile sheet ── */}
       <MobileSheet open={showComposer} onClose={handleClose} title="New debt">
         {composer}
       </MobileSheet>

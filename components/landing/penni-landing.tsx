@@ -149,7 +149,6 @@ function AppPreview() {
 export function PenniLanding() {
   return (
     <main className="bg-app selection:bg-primary/30 relative min-h-screen overflow-hidden">
-      {/* --- Ambient Background Layers --- */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="bg-primary/10 absolute -top-[10%] -left-[10%] h-[40%] w-[40%] rounded-full blur-[120px]" />
         <div className="bg-income/5 absolute top-[20%] -right-[10%] h-[50%] w-[50%] rounded-full blur-[120px]" />

@@ -1,18 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { toast } from 'sonner'
+import { FinanceEmptyState } from '@/components/finance/management-components'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
 import { Button } from '@/components/ui/button'
+import FormErrorMessage from '@/components/ui/form-error-message'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
-import FormErrorMessage from '@/components/ui/form-error-message'
-import { FinanceEmptyState } from '@/components/finance/management-components'
 import {
   useBudgetsQuery,
   useCreateBudgetMutation,
@@ -22,255 +17,22 @@ import {
 import { useCategoriesQuery } from '@/hooks/finance/use-categories-query'
 import { useTransactionsQuery } from '@/hooks/finance/use-transactions-query'
 import { getSpentForBudget } from '@/lib/selectors'
-import type { Budget } from '@/lib/finance.types'
-import { formatCurrency, formatCompactDate } from '@/lib/formatters'
-import { Goal, Pencil, Plus, Trash2 } from 'lucide-react'
-
-type BudgetForm = {
-  name: string
-  amount: string
-  categoryId: string
-  alertThreshold: string
-  periodStart: string
-  periodEnd: string
-}
-
-type BudgetTimingStatus = 'CURRENT' | 'UPCOMING' | 'PAST'
-
-const now = new Date()
-const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  .toISOString()
-  .slice(0, 10)
-const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-  .toISOString()
-  .slice(0, 10)
-
-const DEFAULT_FORM: BudgetForm = {
-  name: '',
-  amount: '',
-  categoryId: '',
-  alertThreshold: '80',
-  periodStart: startOfMonth,
-  periodEnd: endOfMonth,
-}
-
-const budgetFormSchema = z
-  .object({
-    name: z.string(),
-    amount: z
-      .string()
-      .trim()
-      .min(1, 'Enter a budget amount.')
-      .refine(
-        (v) => Number.isFinite(Number(v)) && Number(v) > 0,
-        'Enter a valid budget amount.'
-      ),
-    categoryId: z.string(),
-    alertThreshold: z
-      .string()
-      .trim()
-      .min(1, 'Enter an alert threshold.')
-      .refine(
-        (v) =>
-          Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 100,
-        'Alert threshold must be between 1 and 100.'
-      ),
-    periodStart: z.string().min(1, 'Choose a start date.'),
-    periodEnd: z.string().min(1, 'Choose an end date.'),
-  })
-  .superRefine((v, ctx) => {
-    if (!v.periodStart || !v.periodEnd) return
-    if (new Date(v.periodEnd).getTime() < new Date(v.periodStart).getTime()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['periodEnd'],
-        message: 'Period end must be on or after the start date.',
-      })
-    }
-  })
-
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
-function toIsoDate(dateValue: string, endOfDay = false) {
-  return new Date(
-    `${dateValue}T${endOfDay ? '23:59:59' : '00:00:00'}`
-  ).toISOString()
-}
-
-function mapBudgetToForm(budget: Budget): BudgetForm {
-  return {
-    name: budget.name ?? '',
-    amount: String(budget.amount),
-    categoryId: budget.categoryId ?? '',
-    alertThreshold: String(budget.alertThreshold),
-    periodStart: budget.periodStart.slice(0, 10),
-    periodEnd: budget.periodEnd.slice(0, 10),
-  }
-}
-
-function getBudgetTimingStatus(
-  budget: Budget,
-  today: Date
-): BudgetTimingStatus {
-  const start = new Date(budget.periodStart)
-  const end = new Date(budget.periodEnd)
-  if (today < start) return 'UPCOMING'
-  if (today > end) return 'PAST'
-  return 'CURRENT'
-}
-
-function getProgressState(
-  spent: number,
-  limit: number,
-  alertThreshold: number
-) {
-  const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
-  const isOver = spent > limit
-  const isReached = !isOver && limit > 0 && spent >= limit
-  const isWarning = pct >= alertThreshold
-  return {
-    pct,
-    isOver,
-    label: isOver
-      ? 'Over budget'
-      : isReached
-        ? 'Budget reached'
-        : isWarning
-          ? 'Approaching'
-          : 'On track',
-    labelColor: isOver
-      ? '#ff8a94'
-      : isReached || isWarning
-        ? '#ffc857'
-        : '#4a5650',
-    barColor: isOver
-      ? '#ff8a94'
-      : isReached || isWarning
-        ? '#ffc857'
-        : '#8bff62',
-  }
-}
-
-// ─── Budget row ────────────────────────────────────────────────────────────────
-
-function BudgetRow({
-  budget,
-  spent,
-  categoryName,
-  onEdit,
-  onDelete,
-}: {
-  budget: Budget
-  spent: number
-  categoryName: string | null
-  onEdit: () => void
-  onDelete: () => void
-}) {
-  const limit = Number(budget.amount)
-  const remaining = limit - spent
-  const { pct, label, labelColor, barColor } = getProgressState(
-    spent,
-    limit,
-    budget.alertThreshold
-  )
-
-  return (
-    <div className="flex flex-col gap-3 rounded-[20px] border border-[#17211c] bg-[#0f1512] p-4">
-      {/* Top row */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-bold text-[#f4f7f5]">
-            {budget.name || categoryName || 'Unnamed budget'}
-          </p>
-          <p className="mt-0.5 text-[11px] font-medium text-[#4a5650]">
-            {formatCompactDate(budget.periodStart)} →{' '}
-            {formatCompactDate(budget.periodEnd)}
-            {categoryName ? (
-              <span className="ml-2 text-[#41d6b2]">{categoryName}</span>
-            ) : null}
-          </p>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="flex size-8 items-center justify-center rounded-full bg-[#18221d] transition hover:bg-[#213129]"
-            aria-label="Edit budget"
-          >
-            <Pencil className="size-3.5 text-[#8bff62]" />
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="flex size-8 items-center justify-center rounded-full bg-[#241719] transition hover:bg-[#311d22]"
-            aria-label="Delete budget"
-          >
-            <Trash2 className="size-3.5 text-[#ff8a94]" />
-          </button>
-        </div>
-      </div>
-
-      {/* Progress bar */}
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1a2c1f]">
-        <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${pct}%`, backgroundColor: barColor }}
-        />
-      </div>
-
-      {/* Bottom row */}
-      <div className="flex items-center justify-between gap-2">
-        <p
-          className="text-[12px] font-semibold"
-          style={{ color: remaining < 0 ? '#ff8a94' : '#93a19a' }}
-        >
-          {remaining < 0 ? 'Over ' : ''}
-          {formatCurrency(Math.abs(remaining), budget.currency)} left
-          <span className="ml-1.5 font-normal text-[#4a5650]">
-            of {formatCurrency(limit, budget.currency)}
-          </span>
-        </p>
-        <span className="text-[11px] font-bold" style={{ color: labelColor }}>
-          {label}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-// ─── Section block ─────────────────────────────────────────────────────────────
-
-function BudgetSection({
-  title,
-  badge,
-  badgeColor,
-  children,
-}: {
-  title: string
-  badge: string
-  badgeColor: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between px-0.5">
-        <h3 className="text-[13px] font-bold tracking-[1.8px] text-[#4a5650] uppercase">
-          {title}
-        </h3>
-        <span
-          className="rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase"
-          style={{ color: badgeColor, backgroundColor: `${badgeColor}15` }}
-        >
-          {badge}
-        </span>
-      </div>
-      <div className="flex flex-col gap-2.5">{children}</div>
-    </div>
-  )
-}
-
-// ─── Page ──────────────────────────────────────────────────────────────────────
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Goal, Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
+import { toast } from 'sonner'
+import { BudgetRow } from './_components/budget-row'
+import { BudgetSection } from './_components/budget-section'
+import {
+  budgetFormSchema,
+  DEFAULT_BUDGET_FORM,
+  getBudgetTimingStatus,
+  mapBudgetToForm,
+  toBudgetIsoDate,
+  type BudgetForm,
+  type BudgetTimingStatus,
+} from './_lib/budgets-page.helpers'
 
 export default function BudgetsPage() {
   const budgetsQuery = useBudgetsQuery()
@@ -292,7 +54,7 @@ export default function BudgetsPage() {
     formState: { errors },
   } = useForm<BudgetForm>({
     resolver: zodResolver(budgetFormSchema),
-    defaultValues: DEFAULT_FORM,
+    defaultValues: DEFAULT_BUDGET_FORM,
   })
 
   const categoryId = useWatch({ control, name: 'categoryId' })
@@ -348,7 +110,7 @@ export default function BudgetsPage() {
 
   const resetForm = () => {
     setEditingBudgetId(null)
-    reset(DEFAULT_FORM)
+    reset(DEFAULT_BUDGET_FORM)
     setShowComposer(false)
   }
 
@@ -359,8 +121,8 @@ export default function BudgetsPage() {
       amount: Number(values.amount).toFixed(2),
       currency: 'PHP',
       alertThreshold: Number(values.alertThreshold || 80),
-      periodStart: toIsoDate(values.periodStart),
-      periodEnd: toIsoDate(values.periodEnd, true),
+      periodStart: toBudgetIsoDate(values.periodStart),
+      periodEnd: toBudgetIsoDate(values.periodEnd, true),
     }
 
     if (editingBudgetId) {
@@ -391,8 +153,6 @@ export default function BudgetsPage() {
         ),
     })
   }
-
-  // ── Composer form ────────────────────────────────────────────────────────────
 
   const composerContent = (
     <form
@@ -536,8 +296,6 @@ export default function BudgetsPage() {
     </form>
   )
 
-  // ── Render ────────────────────────────────────────────────────────────────────
-
   return (
     <>
       <DashboardHeaderShell>
@@ -550,10 +308,8 @@ export default function BudgetsPage() {
       </DashboardHeaderShell>
 
       <div className="flex flex-col gap-5 px-4 pt-6 pb-28 md:px-6 lg:px-8">
-        {/* ── Stat chips + action row ── */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            {/* Current chip */}
             <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
               <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">
                 Current
@@ -562,7 +318,6 @@ export default function BudgetsPage() {
                 {currentBudgets.length}
               </span>
             </div>
-            {/* Upcoming chip */}
             <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
               <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">
                 Upcoming
@@ -571,7 +326,6 @@ export default function BudgetsPage() {
                 {upcomingBudgets.length}
               </span>
             </div>
-            {/* Past chip */}
             <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
               <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">
                 Past
@@ -588,7 +342,7 @@ export default function BudgetsPage() {
               if (showComposer) {
                 resetForm()
               } else {
-                reset(DEFAULT_FORM)
+                reset(DEFAULT_BUDGET_FORM)
                 setEditingBudgetId(null)
                 setShowComposer(true)
               }
@@ -599,12 +353,10 @@ export default function BudgetsPage() {
           </Button>
         </div>
 
-        {/* ── Desktop composer ── */}
         {showComposer ? (
           <div className="hidden lg:block">{composerContent}</div>
         ) : null}
 
-        {/* ── Current budgets ── */}
         <BudgetSection
           title="Current"
           badge={`${currentBudgets.length} active`}
@@ -652,7 +404,6 @@ export default function BudgetsPage() {
           )}
         </BudgetSection>
 
-        {/* ── Upcoming budgets ── */}
         {!budgetsQuery.isLoading && upcomingBudgets.length > 0 ? (
           <BudgetSection
             title="Upcoming"
@@ -685,7 +436,6 @@ export default function BudgetsPage() {
           </BudgetSection>
         ) : null}
 
-        {/* ── Past budgets ── */}
         {!budgetsQuery.isLoading && pastBudgets.length > 0 ? (
           <BudgetSection
             title="Past"
@@ -719,7 +469,6 @@ export default function BudgetsPage() {
         ) : null}
       </div>
 
-      {/* ── Mobile sheet ── */}
       <MobileSheet
         open={showComposer}
         onClose={resetForm}

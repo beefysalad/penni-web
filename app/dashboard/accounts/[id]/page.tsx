@@ -1,10 +1,5 @@
 'use client'
 
-import Link from 'next/link'
-import { notFound, useParams } from 'next/navigation'
-import { useMemo } from 'react'
-import { AppPageHeader } from '@/components/navigation/app-page-header'
-import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
 import {
   AccountCard,
   AccountSkeletonCard,
@@ -14,12 +9,13 @@ import {
   FinanceEmptyState,
   PlannedItemRow,
 } from '@/components/finance/management-components'
+import { AppPageHeader } from '@/components/navigation/app-page-header'
+import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
 import { Button } from '@/components/ui/button'
 import { useAccountsQuery } from '@/hooks/finance/use-accounts-query'
 import { usePlannedItemsQuery } from '@/hooks/finance/use-planned-items-query'
 import { useTransactionsQuery } from '@/hooks/finance/use-transactions-query'
 import { ACCOUNT_TYPE_META } from '@/lib/constants'
-import type { PlannedItem } from '@/lib/finance.types'
 import { formatCurrency, formatShortDate } from '@/lib/formatters'
 import { getPlannedItemRecurringState } from '@/lib/recurring'
 import { groupTransactionsIntoSections } from '@/lib/selectors'
@@ -30,91 +26,15 @@ import {
   Calendar,
   ReceiptText,
 } from 'lucide-react'
-
-function getStatusLabel(
-  status: ReturnType<typeof getPlannedItemRecurringState>['status']
-) {
-  if (status === 'OVERDUE') return 'Overdue'
-  if (status === 'DUE') return 'Due today'
-  if (status === 'COMPLETE') return 'Complete'
-  return 'Upcoming'
-}
-
-function getStatusTone(
-  status: ReturnType<typeof getPlannedItemRecurringState>['status']
-) {
-  if (status === 'OVERDUE') return 'danger' as const
-  if (status === 'COMPLETE') return 'success' as const
-  return 'neutral' as const
-}
-
-function getHelperText(item: ReturnType<typeof getPlannedItemRecurringState>) {
-  if (item.status === 'COMPLETE' && item.matchedTransaction) {
-    return item.item.type === 'INCOME'
-      ? `Matched deposit on ${formatShortDate(item.matchedTransaction.transactionAt)}.`
-      : `Matched payment on ${formatShortDate(item.matchedTransaction.transactionAt)}.`
-  }
-
-  if (item.status === 'DUE') {
-    return item.item.type === 'INCOME'
-      ? 'Expected today.'
-      : 'Planned to be paid today.'
-  }
-
-  if (item.status === 'OVERDUE') {
-    return `Expected on ${formatShortDate(item.scheduledFor)}.`
-  }
-
-  return `Scheduled for ${formatShortDate(item.scheduledFor)}.`
-}
-
-function StatsTile({
-  label,
-  value,
-  hint,
-  tone = 'default',
-  icon: Icon,
-}: {
-  label: string
-  value: string
-  hint: string
-  tone?: 'default' | 'positive' | 'negative' | 'transfer'
-  icon: typeof ArrowUpRight
-}) {
-  const toneClass =
-    tone === 'positive'
-      ? 'text-[#41d6b2]'
-      : tone === 'negative'
-        ? 'text-[#ff8a94]'
-        : tone === 'transfer'
-          ? 'text-[#ffd66b]'
-          : 'text-[#f4f7f5]'
-  const iconWrapClass =
-    tone === 'positive'
-      ? 'bg-[#16211b]'
-      : tone === 'negative'
-        ? 'bg-[#241719]'
-        : tone === 'transfer'
-          ? 'bg-[#2a2412]'
-          : 'bg-[#18221d]'
-
-  return (
-    <div className="rounded-[24px] border border-[#17211c] bg-[#111916] p-4">
-      <div
-        className={`flex size-10 items-center justify-center rounded-full ${iconWrapClass}`}
-      >
-        <Icon className={`size-5 ${toneClass}`} />
-      </div>
-      <p className="mt-4 text-[10px] font-bold tracking-[1.8px] text-[#6d786f] uppercase">
-        {label}
-      </p>
-      <p className={`mt-2 text-[20px] font-bold tracking-tight ${toneClass}`}>
-        {value}
-      </p>
-      <p className="mt-1 text-[13px] font-medium text-[#7f8c86]">{hint}</p>
-    </div>
-  )
-}
+import Link from 'next/link'
+import { notFound, useParams } from 'next/navigation'
+import { useMemo } from 'react'
+import { AccountDetailStatsTile } from './_components/account-detail-stats-tile'
+import {
+  getRecurringHelperText,
+  getRecurringStatusLabel,
+  getRecurringStatusTone,
+} from './_lib/account-detail.helpers'
 
 export default function AccountDetailPage() {
   const params = useParams<{ id: string }>()
@@ -286,7 +206,7 @@ export default function AccountDetailPage() {
 
         {!isLoading && account ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatsTile
+            <AccountDetailStatsTile
               label={isCreditCard ? 'Payments' : 'Money in'}
               value={formatCurrency(
                 isCreditCard ? creditCardPayments : moneyIn,
@@ -300,7 +220,7 @@ export default function AccountDetailPage() {
               tone="positive"
               icon={ArrowUpRight}
             />
-            <StatsTile
+            <AccountDetailStatsTile
               label={isCreditCard ? 'Charges' : 'Money out'}
               value={formatCurrency(
                 isCreditCard ? creditCardCharges : moneyOut,
@@ -314,14 +234,14 @@ export default function AccountDetailPage() {
               tone="negative"
               icon={ArrowDownLeft}
             />
-            <StatsTile
+            <AccountDetailStatsTile
               label="Transfers"
               value={formatCurrency(transferMoves, account.currency)}
               hint="Internal balance moves tied to this account."
               tone="transfer"
               icon={ArrowRightLeft}
             />
-            <StatsTile
+            <AccountDetailStatsTile
               label="Last activity"
               value={lastActivity}
               hint={`${accountTransactions.length} total transaction${accountTransactions.length === 1 ? '' : 's'}.`}
@@ -413,9 +333,9 @@ export default function AccountDetailPage() {
                       key={entry.item.id}
                       item={entry.item}
                       scheduledFor={entry.scheduledFor}
-                      statusLabel={getStatusLabel(entry.status)}
-                      statusTone={getStatusTone(entry.status)}
-                      helperText={getHelperText(entry)}
+                      statusLabel={getRecurringStatusLabel(entry.status)}
+                      statusTone={getRecurringStatusTone(entry.status)}
+                      helperText={getRecurringHelperText(entry)}
                       isLast={index === plannedItemsWithState.length - 1}
                     />
                   ))}
