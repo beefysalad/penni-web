@@ -32,61 +32,15 @@ import {
   type AccountFilter,
 } from '@/lib/constants'
 import {
-  getAccountAvailableCredit,
-  getAccountCreditLimit,
-  getAccountDueDayOfMonth,
   type Account,
   type AccountType,
 } from '@/lib/finance.types'
 import { Pencil, Plus, Trash2, WalletCards } from 'lucide-react'
-
-type AccountForm = {
-  name: string
-  type: AccountType
-  currency: string
-  balance: string
-  institutionName: string
-  creditLimit: string
-  availableCredit: string
-  dueDayOfMonth: string
-  statementDayOfMonth: string
-}
-
-const DEFAULT_FORM: AccountForm = {
-  name: '',
-  type: 'BANK_ACCOUNT',
-  currency: 'PHP',
-  balance: '',
-  institutionName: '',
-  creditLimit: '',
-  availableCredit: '',
-  dueDayOfMonth: '',
-  statementDayOfMonth: '',
-}
-
-function mapAccountToForm(account: Account): AccountForm {
-  return {
-    name: account.name,
-    type: account.type,
-    currency: account.currency,
-    balance: String(account.balance ?? ''),
-    institutionName: account.institutionName ?? '',
-    creditLimit:
-      getAccountCreditLimit(account) !== null
-        ? String(getAccountCreditLimit(account))
-        : '',
-    availableCredit:
-      getAccountAvailableCredit(account) !== null
-        ? String(getAccountAvailableCredit(account))
-        : '',
-    dueDayOfMonth: getAccountDueDayOfMonth(account)
-      ? String(getAccountDueDayOfMonth(account))
-      : '',
-    statementDayOfMonth: account.creditCard?.statementDayOfMonth
-      ? String(account.creditCard.statementDayOfMonth)
-      : '',
-  }
-}
+import {
+  DEFAULT_ACCOUNT_FORM,
+  mapAccountToForm,
+  type AccountForm,
+} from './_lib/accounts-page.helpers'
 
 export default function AccountsPage() {
   const router = useRouter()
@@ -107,7 +61,7 @@ export default function AccountsPage() {
     control,
     formState: { errors },
   } = useForm<AccountForm>({
-    defaultValues: DEFAULT_FORM,
+    defaultValues: DEFAULT_ACCOUNT_FORM,
   })
 
   const type = useWatch({ control, name: 'type' })
@@ -133,7 +87,7 @@ export default function AccountsPage() {
 
   const resetForm = () => {
     setEditingAccountId(null)
-    reset(DEFAULT_FORM)
+    reset(DEFAULT_ACCOUNT_FORM)
     setShowComposer(false)
   }
 

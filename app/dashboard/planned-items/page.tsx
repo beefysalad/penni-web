@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { toast } from 'sonner'
 import { AppPageHeader } from '@/components/navigation/app-page-header'
 import { DashboardHeaderShell } from '@/components/navigation/dashboard-header-shell'
@@ -31,165 +30,21 @@ import type {
   PlannedItem,
   RecurrenceFrequency,
 } from '@/lib/finance.types'
-import { formatCurrency, formatShortDate } from '@/lib/formatters'
+import { formatCurrency } from '@/lib/formatters'
 import {
   getPlannedItemRecurringState,
   type PlannedItemWithRecurringState,
 } from '@/lib/recurring'
 import { Calendar, Plus, Sparkles, Trash2 } from 'lucide-react'
-
-type PlannedItemForm = {
-  type: CategoryType
-  categoryId: string
-  title: string
-  amount: string
-  accountId: string
-  startDate: string
-  recurrence: RecurrenceFrequency
-  firstSemiMonthlyDay: string
-  secondSemiMonthlyDay: string
-}
-
-const DEFAULT_PLANNED_ITEM_FORM: PlannedItemForm = {
-  type: 'EXPENSE',
-  categoryId: '',
-  title: '',
-  amount: '',
-  accountId: '',
-  startDate: new Date().toISOString().slice(0, 10),
-  recurrence: 'MONTHLY',
-  firstSemiMonthlyDay: '15',
-  secondSemiMonthlyDay: '30',
-}
-
-const RECURRENCE_OPTIONS: Array<{ label: string; value: RecurrenceFrequency }> =
-  [
-    { label: 'Weekly', value: 'WEEKLY' },
-    { label: 'Monthly', value: 'MONTHLY' },
-    { label: 'Semi-monthly', value: 'SEMI_MONTHLY' },
-    { label: 'Quarterly', value: 'QUARTERLY' },
-    { label: 'Yearly', value: 'YEARLY' },
-  ]
-
-const plannedItemFormSchema = z
-  .object({
-    type: z.enum(['EXPENSE', 'INCOME']),
-    categoryId: z.string(),
-    title: z.string().trim().min(1, 'A recurring item name is required.'),
-    amount: z
-      .string()
-      .trim()
-      .min(1, 'Enter a valid amount.')
-      .refine(
-        (value) => Number.isFinite(Number(value)) && Number(value) > 0,
-        'Enter a valid amount.'
-      ),
-    accountId: z.string(),
-    startDate: z.string().min(1, 'Choose a start date.'),
-    recurrence: z.enum([
-      'WEEKLY',
-      'MONTHLY',
-      'SEMI_MONTHLY',
-      'QUARTERLY',
-      'YEARLY',
-    ]),
-    firstSemiMonthlyDay: z.string(),
-    secondSemiMonthlyDay: z.string(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.type === 'INCOME' && !value.accountId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['accountId'],
-        message: 'Income recurring items need an account.',
-      })
-    }
-
-    if (value.recurrence !== 'SEMI_MONTHLY') {
-      return
-    }
-
-    const first = Number(value.firstSemiMonthlyDay)
-    const second = Number(value.secondSemiMonthlyDay)
-
-    if (!Number.isInteger(first) || first < 1 || first > 31) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['firstSemiMonthlyDay'],
-        message: 'Choose a day between 1 and 31.',
-      })
-    }
-
-    if (!Number.isInteger(second) || second < 1 || second > 31) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['secondSemiMonthlyDay'],
-        message: 'Choose a day between 1 and 31.',
-      })
-    }
-
-    if (
-      Number.isInteger(first) &&
-      Number.isInteger(second) &&
-      first === second
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['secondSemiMonthlyDay'],
-        message: 'The two semi-monthly days need to be different.',
-      })
-    }
-  })
-
-function toIsoDate(dateValue: string) {
-  return new Date(`${dateValue}T00:00:00`).toISOString()
-}
-
-function getStatusLabel(status: PlannedItemWithRecurringState['status']) {
-  if (status === 'OVERDUE') return 'Overdue'
-  if (status === 'DUE') return 'Due today'
-  if (status === 'COMPLETE') return 'Complete'
-  return 'Upcoming'
-}
-
-function getCompletionActionLabel(type: CategoryType) {
-  return type === 'INCOME' ? 'Mark received' : 'Mark paid'
-}
-
-function getCompletionToastLabel(type: CategoryType) {
-  return type === 'INCOME' ? 'marked as received' : 'marked as paid'
-}
-
-function getCompletedSectionLabel(type: CategoryType) {
-  return type === 'INCOME' ? 'Received' : 'Paid'
-}
-
-function getStatusTone(status: PlannedItemWithRecurringState['status']) {
-  if (status === 'OVERDUE') return 'danger' as const
-  if (status === 'COMPLETE') return 'success' as const
-  return 'neutral' as const
-}
-
-function getHelperText(plannedItem: PlannedItemWithRecurringState) {
-  const actionLabel =
-    plannedItem.item.type === 'INCOME' ? 'Mark it received' : 'Mark it paid'
-
-  if (plannedItem.status === 'COMPLETE' && plannedItem.matchedTransaction) {
-    return plannedItem.item.type === 'INCOME'
-      ? `Matched deposit on ${formatShortDate(plannedItem.matchedTransaction.transactionAt)}.`
-      : `Matched payment on ${formatShortDate(plannedItem.matchedTransaction.transactionAt)}.`
-  }
-
-  if (plannedItem.status === 'DUE') {
-    return `Expected today. ${actionLabel} once the transaction lands.`
-  }
-
-  if (plannedItem.status === 'OVERDUE') {
-    return `Expected on ${formatShortDate(plannedItem.scheduledFor)}.`
-  }
-
-  return `Scheduled for ${formatShortDate(plannedItem.scheduledFor)}.`
-}
+import { PlannedItemGroup } from './_components/planned-item-group'
+import {
+  DEFAULT_PLANNED_ITEM_FORM,
+  getCompletionToastLabel,
+  plannedItemFormSchema,
+  RECURRENCE_OPTIONS,
+  toPlannedItemIsoDate,
+  type PlannedItemForm,
+} from './_lib/planned-items-page.helpers'
 
 export default function PlannedItemsPage() {
   const plannedItemsQuery = usePlannedItemsQuery({ isActive: true })
@@ -294,13 +149,13 @@ export default function PlannedItemsPage() {
         accountId: values.accountId || undefined,
         categoryId: values.categoryId || undefined,
         type: values.type,
-        title,
-        amount: amount.toFixed(2),
-        currency: 'PHP',
-        startDate: toIsoDate(values.startDate),
-        recurrence: values.recurrence,
-        semiMonthlyDays,
-        isActive: true,
+          title,
+          amount: amount.toFixed(2),
+          currency: 'PHP',
+          startDate: toPlannedItemIsoDate(values.startDate),
+          recurrence: values.recurrence,
+          semiMonthlyDays,
+          isActive: true,
       },
       {
         onSuccess: () => {
@@ -355,130 +210,6 @@ export default function PlannedItemsPage() {
           )
         },
       }
-    )
-  }
-
-  const renderPlannedItemGroup = (
-    title: string,
-    items: PlannedItemWithRecurringState[],
-    emptyState: {
-      icon: typeof Calendar
-      title: string
-      description: string
-    },
-    accentClassName: string
-  ) => {
-    const itemType = items[0]?.item.type ?? 'EXPENSE'
-    const overdueItems = items.filter((item) => item.status === 'OVERDUE')
-    const dueItems = items.filter((item) => item.status === 'DUE')
-    const upcomingItems = items.filter((item) => item.status === 'UPCOMING')
-    const completedItems = items.filter((item) => item.status === 'COMPLETE')
-
-    const sections = [
-      { title: 'Overdue', items: overdueItems },
-      { title: 'Due today', items: dueItems },
-      { title: 'Upcoming', items: upcomingItems },
-      { title: getCompletedSectionLabel(itemType), items: completedItems },
-    ].filter((section) => section.items.length > 0)
-
-    return (
-      <div className="flex flex-col gap-6 pt-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">
-              {title}
-            </h3>
-            <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
-              {title === 'Recurring expenses'
-                ? 'Bills stay expected until you confirm the payment.'
-                : 'Recurring income stays projected until the money actually lands.'}
-            </p>
-          </div>
-          <span
-            className={cn(
-              'shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-bold',
-              accentClassName
-            )}
-          >
-            {items.length} items
-          </span>
-        </div>
-
-        <div className="flex flex-col gap-6">
-          {isLoading ? (
-            <div className="space-y-3">
-              <div className="h-16 animate-pulse rounded-[24px] border border-[#17211c] bg-[#111916]" />
-              <div className="h-16 animate-pulse rounded-[24px] border border-[#17211c] bg-[#111916]" />
-            </div>
-          ) : sections.length > 0 ? (
-            <div className="space-y-6">
-              {sections.map((section) => (
-                <div key={section.title} className="space-y-3">
-                  <p className="px-1 text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
-                    {section.title}
-                  </p>
-                  <div className="overflow-hidden rounded-[24px] border border-[#17211c] bg-[#111916]">
-                    {section.items.map((entry, index) => (
-                      <PlannedItemRow
-                        key={entry.item.id}
-                        item={entry.item}
-                        scheduledFor={entry.scheduledFor}
-                        statusLabel={getStatusLabel(entry.status)}
-                        statusTone={getStatusTone(entry.status)}
-                        helperText={getHelperText(entry)}
-                        isLast={index === section.items.length - 1}
-                        action={
-                          <div className="flex items-center gap-2">
-                            {entry.status !== 'COMPLETE' ? (
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={() => handleCompletePlannedItem(entry)}
-                                disabled={completePlannedItemMutation.isPending}
-                                className="h-8 rounded-full px-3"
-                              >
-                                {getCompletionActionLabel(entry.item.type)}
-                              </Button>
-                            ) : null}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDeletePlannedItem(entry.item)
-                              }
-                              className={cn(
-                                'flex size-8 items-center justify-center rounded-full transition',
-                                entry.item.type === 'EXPENSE'
-                                  ? 'bg-[#241719] hover:bg-[#311d22]'
-                                  : 'bg-[#16211b] hover:bg-[#1d2a20]'
-                              )}
-                              aria-label={`Delete ${entry.item.title}`}
-                            >
-                              <Trash2
-                                className={cn(
-                                  'size-4',
-                                  entry.item.type === 'EXPENSE'
-                                    ? 'text-[#ff8a94]'
-                                    : 'text-[#41d6b2]'
-                                )}
-                              />
-                            </button>
-                          </div>
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <FinanceEmptyState
-              icon={emptyState.icon}
-              title={emptyState.title}
-              description={emptyState.description}
-            />
-          )}
-        </div>
-      </div>
     )
   }
 
@@ -813,29 +544,37 @@ export default function PlannedItemsPage() {
         ) : null}
 
         <div className="space-y-6">
-          {renderPlannedItemGroup(
-            'Recurring expenses',
-            expenseItems,
-            {
+          <PlannedItemGroup
+            title="Recurring expenses"
+            items={expenseItems}
+            isLoading={isLoading}
+            emptyState={{
               icon: Calendar,
               title: 'No recurring item',
               description:
                 "You haven't scheduled any recurring income or expenses yet.",
-            },
-            'bg-[#241719] text-[#ff8a94]'
-          )}
+            }}
+            accentClassName="bg-[#241719] text-[#ff8a94]"
+            onComplete={handleCompletePlannedItem}
+            onDelete={handleDeletePlannedItem}
+            isCompleting={completePlannedItemMutation.isPending}
+          />
 
-          {renderPlannedItemGroup(
-            'Recurring income',
-            incomeItems,
-            {
+          <PlannedItemGroup
+            title="Recurring income"
+            items={incomeItems}
+            isLoading={isLoading}
+            emptyState={{
               icon: Sparkles,
               title: 'No recurring income yet',
               description:
                 'Add salary or repeat payouts here so Home can project incoming cash more clearly.',
-            },
-            'bg-[#16211b] text-[#41d6b2]'
-          )}
+            }}
+            accentClassName="bg-[#16211b] text-[#41d6b2]"
+            onComplete={handleCompletePlannedItem}
+            onDelete={handleDeletePlannedItem}
+            isCompleting={completePlannedItemMutation.isPending}
+          />
         </div>
       </div>
 
