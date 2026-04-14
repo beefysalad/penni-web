@@ -23,6 +23,33 @@ function isWithinWindow(target: Date, from: Date, to: Date) {
   return target >= from && target <= to
 }
 
+function normalizeTitle(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function titlesLookRelated(left: string, right: string) {
+  const normalizedLeft = normalizeTitle(left)
+  const normalizedRight = normalizeTitle(right)
+
+  if (!normalizedLeft || !normalizedRight) return false
+  if (normalizedLeft === normalizedRight) return true
+  if (normalizedLeft.includes(normalizedRight) || normalizedRight.includes(normalizedLeft)) {
+    return Math.min(normalizedLeft.length, normalizedRight.length) >= 4
+  }
+
+  const leftTokens = normalizedLeft.split(' ').filter((token) => token.length > 2)
+  const rightTokens = normalizedRight.split(' ').filter((token) => token.length > 2)
+
+  if (leftTokens.length === 0 || rightTokens.length === 0) return false
+
+  const sharedCount = leftTokens.filter((token) => rightTokens.includes(token)).length
+  return sharedCount >= Math.min(2, leftTokens.length, rightTokens.length)
+}
+
 export function getRecurringMatchForItem(item: PlannedItem, transactions: Transaction[]) {
   const scheduledFor = item.nextOccurrenceAt ?? item.startDate
   const scheduledDate = startOfDay(new Date(scheduledFor))
@@ -39,10 +66,14 @@ export function getRecurringMatchForItem(item: PlannedItem, transactions: Transa
         }
 
         if (item.accountId && transaction.accountId !== item.accountId) return false
+        if (transaction.currency !== item.currency) return false
+        if (item.categoryId && transaction.categoryId !== item.categoryId) return false
         if (Number(transaction.amount) !== Number(item.amount)) return false
 
         const transactionDate = startOfDay(new Date(transaction.transactionAt))
-        return isWithinWindow(transactionDate, windowStart, windowEnd)
+        if (!isWithinWindow(transactionDate, windowStart, windowEnd)) return false
+
+        return titlesLookRelated(transaction.title, item.title)
       })
       .sort((a, b) => new Date(b.transactionAt).getTime() - new Date(a.transactionAt).getTime())[0] ?? null
   )

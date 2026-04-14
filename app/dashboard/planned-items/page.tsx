@@ -12,10 +12,7 @@ import { Label } from '@/components/ui/label'
 import { MobileSheet } from '@/components/ui/mobile-sheet'
 import FormErrorMessage from '@/components/ui/form-error-message'
 import { cn } from '@/lib/utils'
-import {
-  FinanceEmptyState,
-  PlannedItemRow,
-} from '@/components/finance/management-components'
+import {} from '@/components/finance/management-components'
 import { useAccountsQuery } from '@/hooks/finance/use-accounts-query'
 import {
   useCreatePlannedItemMutation,
@@ -30,7 +27,7 @@ import type {
   PlannedItem,
   RecurrenceFrequency,
 } from '@/lib/finance.types'
-import { formatCurrency } from '@/lib/formatters'
+import { formatCurrency, formatShortDate } from '@/lib/formatters'
 import {
   getPlannedItemRecurringState,
   type PlannedItemWithRecurringState,
@@ -76,13 +73,20 @@ export default function PlannedItemsPage() {
   const recurrence = useWatch({ control, name: 'recurrence' })
   const title = useWatch({ control, name: 'title' })
   const amount = useWatch({ control, name: 'amount' })
+  const startDate = useWatch({ control, name: 'startDate' })
 
   const accounts = accountsQuery.data ?? []
   const expenseCategories = expenseCategoriesQuery.data ?? []
   const incomeCategories = incomeCategoriesQuery.data ?? []
   const categories = type === 'INCOME' ? incomeCategories : expenseCategories
-  const plannedItems = useMemo(() => plannedItemsQuery.data ?? [], [plannedItemsQuery.data])
-  const transactions = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data])
+  const plannedItems = useMemo(
+    () => plannedItemsQuery.data ?? [],
+    [plannedItemsQuery.data]
+  )
+  const transactions = useMemo(
+    () => transactionsQuery.data ?? [],
+    [transactionsQuery.data]
+  )
 
   useEffect(() => {
     if (!categoryId) return
@@ -112,6 +116,23 @@ export default function PlannedItemsPage() {
   )
   const expenseItems = useMemo(
     () => plannedItemsWithState.filter((item) => item.item.type === 'EXPENSE'),
+    [plannedItemsWithState]
+  )
+  const dueCount = useMemo(
+    () =>
+      plannedItemsWithState.filter(
+        (item) => item.status === 'DUE' || item.status === 'OVERDUE'
+      ).length,
+    [plannedItemsWithState]
+  )
+  const completedCount = useMemo(
+    () =>
+      plannedItemsWithState.filter((item) => item.status === 'COMPLETE').length,
+    [plannedItemsWithState]
+  )
+  const upcomingCount = useMemo(
+    () =>
+      plannedItemsWithState.filter((item) => item.status === 'UPCOMING').length,
     [plannedItemsWithState]
   )
 
@@ -149,13 +170,13 @@ export default function PlannedItemsPage() {
         accountId: values.accountId || undefined,
         categoryId: values.categoryId || undefined,
         type: values.type,
-          title,
-          amount: amount.toFixed(2),
-          currency: 'PHP',
-          startDate: toPlannedItemIsoDate(values.startDate),
-          recurrence: values.recurrence,
-          semiMonthlyDays,
-          isActive: true,
+        title,
+        amount: amount.toFixed(2),
+        currency: 'PHP',
+        startDate: toPlannedItemIsoDate(values.startDate),
+        recurrence: values.recurrence,
+        semiMonthlyDays,
+        isActive: true,
       },
       {
         onSuccess: () => {
@@ -473,21 +494,53 @@ export default function PlannedItemsPage() {
 
       <div className="mt-6 rounded-[22px] border border-[#17211c] bg-[#101713] p-4">
         <p className="text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
-          Preview
+          What This Creates
         </p>
-        <p className="mt-2 text-[16px] font-bold text-[#f4f7f5]">
+        <p className="mt-3 text-[18px] font-bold text-[#f4f7f5]">
           {title?.trim() || 'Your recurring item'}
         </p>
-        {selectedCategory ? (
-          <p className="mt-1 text-[12px] font-semibold text-[#93a19a]">
-            {selectedCategory.name}
-          </p>
-        ) : null}
-        <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
-          {amount ? formatCurrency(Number(amount) || 0) : '₱0.00'} •{' '}
-          {RECURRENCE_OPTIONS.find((option) => option.value === recurrence)
-            ?.label ?? 'Every month'}
+        <p className="mt-2 text-[30px] font-bold tracking-tight text-[#8bff62]">
+          {amount ? formatCurrency(Number(amount) || 0) : '₱0.00'}
         </p>
+        <div className="mt-4 space-y-3 rounded-[18px] bg-[#141d18] p-4">
+          <div className="flex items-start justify-between gap-4">
+            <span className="text-[11px] font-bold tracking-[1.6px] text-[#4a5650] uppercase">
+              First Date
+            </span>
+            <span className="text-right text-[13px] font-semibold text-[#f4f7f5]">
+              {type === 'INCOME' ? 'Payout' : 'Due'} on{' '}
+              {startDate
+                ? formatShortDate(toPlannedItemIsoDate(startDate))
+                : 'Choose a date'}
+            </span>
+          </div>
+          <div className="flex items-start justify-between gap-4">
+            <span className="text-[11px] font-bold tracking-[1.6px] text-[#4a5650] uppercase">
+              Repeats
+            </span>
+            <span className="text-right text-[13px] font-semibold text-[#f4f7f5]">
+              {RECURRENCE_OPTIONS.find((option) => option.value === recurrence)
+                ?.label ?? 'Monthly'}
+            </span>
+          </div>
+          <div className="flex items-start justify-between gap-4">
+            <span className="text-[11px] font-bold tracking-[1.6px] text-[#4a5650] uppercase">
+              Account
+            </span>
+            <span className="text-right text-[13px] font-semibold text-[#f4f7f5]">
+              {selectedAccount?.name ??
+                (requiresAccount ? 'Choose an account' : 'Optional for now')}
+            </span>
+          </div>
+          <div className="flex items-start justify-between gap-4">
+            <span className="text-[11px] font-bold tracking-[1.6px] text-[#4a5650] uppercase">
+              Category
+            </span>
+            <span className="text-right text-[13px] font-semibold text-[#f4f7f5]">
+              {selectedCategory?.name ?? 'Uncategorized'}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="mt-6 flex gap-3">
@@ -519,24 +572,64 @@ export default function PlannedItemsPage() {
       </DashboardHeaderShell>
 
       <div className="flex flex-col gap-6 px-4 pt-6 pb-28 md:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
-              <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">Bills</span>
-              <span className="text-[15px] font-bold text-[#ff8a94]">{expenseItems.length}</span>
+        <div className="rounded-[30px] border border-[#1b2a21] bg-[#111916] p-5 md:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-[560px]">
+              <p className="text-[11px] font-bold tracking-[2px] text-[#4a5650] uppercase">
+                Recurring At A Glance
+              </p>
+              <h2 className="mt-3 text-[30px] font-bold tracking-tight text-[#f4f7f5]">
+                See what needs action before it hits activity.
+              </h2>
+              <p className="mt-2 text-[15px] leading-7 font-medium text-[#7f8c86]">
+                Bills stay due until you confirm them. Income stays projected
+                until it lands.
+              </p>
             </div>
-            <div className="flex items-center gap-2 rounded-full border border-[#17211c] bg-[#111916] px-4 py-2">
-              <span className="text-[11px] font-bold tracking-[1.4px] text-[#4a5650] uppercase">Income</span>
-              <span className="text-[15px] font-bold text-[#41d6b2]">{incomeItems.length}</span>
+            <Button
+              onClick={() => setShowComposer((current) => !current)}
+              className="rounded-full px-5"
+            >
+              <Plus className="size-4" />
+              {showComposer ? 'Close' : 'Add recurring item'}
+            </Button>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <div className="rounded-[22px] bg-[#1d1518] p-4">
+              <p className="text-[11px] font-bold tracking-[1.8px] text-[#6d786f] uppercase">
+                Needs Action
+              </p>
+              <p className="mt-2 text-[28px] font-bold text-[#ff8a94]">
+                {dueCount}
+              </p>
+              <p className="mt-1 text-[13px] leading-5 text-[#93a19a]">
+                Due today or already overdue.
+              </p>
+            </div>
+            <div className="rounded-[22px] bg-[#16211b] p-4">
+              <p className="text-[11px] font-bold tracking-[1.8px] text-[#6d786f] uppercase">
+                Logged
+              </p>
+              <p className="mt-2 text-[28px] font-bold text-[#41d6b2]">
+                {completedCount}
+              </p>
+              <p className="mt-1 text-[13px] leading-5 text-[#93a19a]">
+                Already matched to transactions.
+              </p>
+            </div>
+            <div className="rounded-[22px] bg-[#141d18] p-4">
+              <p className="text-[11px] font-bold tracking-[1.8px] text-[#6d786f] uppercase">
+                Upcoming
+              </p>
+              <p className="mt-2 text-[28px] font-bold text-[#f4f7f5]">
+                {upcomingCount}
+              </p>
+              <p className="mt-1 text-[13px] leading-5 text-[#93a19a]">
+                Scheduled next, but not due yet.
+              </p>
             </div>
           </div>
-          <Button
-            onClick={() => setShowComposer((current) => !current)}
-            className="rounded-full px-5"
-          >
-            <Plus className="size-4" />
-            {showComposer ? 'Close' : 'Add recurring item'}
-          </Button>
         </div>
 
         {showComposer ? (

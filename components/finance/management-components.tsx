@@ -141,11 +141,10 @@ export function PlannedItemRow({
   return (
     <div
       className={cn(
-        'flex flex-col gap-2 px-4 py-4',
+        'flex flex-col gap-3 px-4 py-4',
         !isLast && 'border-b border-[#17211c]/60'
       )}
     >
-      {/* Top row: icon + text */}
       <div className="flex items-center gap-3">
         <div
           className={cn(
@@ -163,42 +162,43 @@ export function PlannedItemRow({
           <p className="truncate text-[15px] font-bold text-[#f4f7f5]">
             {item.title}
           </p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-[#7f8c86]">
-            <span>
-              {formatCompactDate(
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Pill
+              label={formatCompactDate(
                 scheduledFor ?? item.nextOccurrenceAt ?? item.startDate
               )}
-            </span>
-            <span className="text-[#314238]">·</span>
-            <span>{formatRecurrenceLabel(item)}</span>
+              variant="subtle"
+              className="border border-[#1c2b23] bg-[#141d18] text-[#dce2de]"
+            />
+            <Pill
+              label={formatRecurrenceLabel(item)}
+              variant="subtle"
+              className="border border-[#1c2b23] bg-[#141d18] text-[#93a19a]"
+            />
             {statusLabel ? (
-              <>
-                <span className="text-[#314238]">·</span>
-                <span
-                  className={cn(
-                    'font-bold tracking-[1.2px] uppercase',
-                    statusTone === 'danger'
-                      ? 'text-[#ff8a94]'
-                      : statusTone === 'success'
-                        ? 'text-[#41d6b2]'
-                        : 'text-[#ffc857]'
-                  )}
-                >
-                  {statusLabel}
-                </span>
-              </>
+              <Pill
+                label={statusLabel}
+                variant="subtle"
+                className={cn(
+                  'border',
+                  statusTone === 'danger'
+                    ? 'border-[#4a2228] bg-[#241719] text-[#ff8a94]'
+                    : statusTone === 'success'
+                      ? 'border-[#244432] bg-[#16211b] text-[#41d6b2]'
+                      : 'border-[#4a3a16] bg-[#2a2412] text-[#ffd66b]'
+                )}
+              />
             ) : null}
           </div>
           {helperText ? (
-            <p className="mt-1 text-[12px] font-medium text-[#93a19a]">
+            <p className="mt-2 text-[12px] font-medium leading-5 text-[#93a19a]">
               {helperText}
             </p>
           ) : null}
         </div>
       </div>
 
-      {/* Bottom row: amount + actions */}
-      <div className="flex items-center justify-between gap-2 pl-[52px]">
+      <div className="flex flex-col gap-3 pl-[52px] sm:flex-row sm:items-center sm:justify-between">
         <p
           className={cn(
             'text-[15px] font-bold',

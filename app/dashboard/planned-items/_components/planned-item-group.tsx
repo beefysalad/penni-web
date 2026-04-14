@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { Pill } from '@/components/ui/pill'
 import { cn } from '@/lib/utils'
 import { FinanceEmptyState, PlannedItemRow } from '@/components/finance/management-components'
 import type { CategoryType } from '@/lib/finance.types'
@@ -41,9 +42,13 @@ export function PlannedItemGroup({
   isCompleting,
 }: PlannedItemGroupProps) {
   const { sections } = getPlannedItemGroups(items)
+  const actionCount = items.filter(
+    (item) => item.status === 'DUE' || item.status === 'OVERDUE'
+  ).length
+  const completedCount = items.filter((item) => item.status === 'COMPLETE').length
 
   return (
-    <div className="flex flex-col gap-6 pt-4">
+    <div className="flex flex-col gap-6 rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5 md:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">
@@ -64,6 +69,21 @@ export function PlannedItemGroup({
           {items.length} items
         </span>
       </div>
+
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          <Pill
+            label={`${actionCount} need action`}
+            variant="subtle"
+            className="border border-[#1c2b23] bg-[#141d18] text-[#dce2de]"
+          />
+          <Pill
+            label={`${completedCount} logged`}
+            variant="subtle"
+            className="border border-[#1c2b23] bg-[#141d18] text-[#93a19a]"
+          />
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-6">
         {isLoading ? (
