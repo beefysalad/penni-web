@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  AccountCard,
   AccountSkeletonCard,
   TransactionRow,
 } from '@/components/finance/finance-components'
@@ -20,16 +19,13 @@ import { formatCurrency, formatShortDate } from '@/lib/formatters'
 import { getPlannedItemRecurringState } from '@/lib/recurring'
 import { groupTransactionsIntoSections } from '@/lib/selectors'
 import {
-  ArrowDownLeft,
-  ArrowRightLeft,
-  ArrowUpRight,
   Calendar,
   ReceiptText,
 } from 'lucide-react'
 import Link from 'next/link'
 import { notFound, useParams } from 'next/navigation'
 import { useMemo } from 'react'
-import { AccountDetailStatsTile } from './_components/account-detail-stats-tile'
+import { AccountDetailOverview } from './_components/account-detail-overview'
 import {
   getRecurringHelperText,
   getRecurringStatusLabel,
@@ -62,13 +58,21 @@ export default function AccountDetailPage() {
     [allTransactions, accountId]
   )
 
-  const signedTransactionDelta = useMemo(
+  const cashFlowTransactions = useMemo(
     () =>
-      accountTransactions.reduce((sum, transaction) => {
+      accountTransactions.filter(
+        (transaction) => transaction.source !== 'TRANSFER'
+      ),
+    [accountTransactions]
+  )
+
+  const signedCashFlowDelta = useMemo(
+    () =>
+      cashFlowTransactions.reduce((sum, transaction) => {
         const amount = Number(transaction.amount)
         return transaction.type === 'INCOME' ? sum + amount : sum - amount
       }, 0),
-    [accountTransactions]
+    [cashFlowTransactions]
   )
 
   const sections = useMemo(
@@ -85,16 +89,8 @@ export default function AccountDetailPage() {
   )
 
   const openingBalance = useMemo(
-    () => (account ? Number(account.balance) - signedTransactionDelta : 0),
-    [account, signedTransactionDelta]
-  )
-
-  const cashFlowTransactions = useMemo(
-    () =>
-      accountTransactions.filter(
-        (transaction) => transaction.source !== 'TRANSFER'
-      ),
-    [accountTransactions]
+    () => (account ? Number(account.balance) - signedCashFlowDelta : 0),
+    [account, signedCashFlowDelta]
   )
 
   const moneyIn = useMemo(
@@ -201,64 +197,26 @@ export default function AccountDetailPage() {
         {isLoading || !account ? (
           <AccountSkeletonCard />
         ) : (
-          <AccountCard account={account} />
+          <AccountDetailOverview
+            account={account}
+            moneyIn={isCreditCard ? creditCardPayments : moneyIn}
+            moneyOut={isCreditCard ? creditCardCharges : moneyOut}
+            recurringCount={plannedItemsWithState.length}
+            totalTransactions={accountTransactions.length}
+          />
         )}
-
-        {!isLoading && account ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <AccountDetailStatsTile
-              label={isCreditCard ? 'Payments' : 'Money in'}
-              value={formatCurrency(
-                isCreditCard ? creditCardPayments : moneyIn,
-                account.currency
-              )}
-              hint={
-                isCreditCard
-                  ? 'Credits and payments posted to this card so far.'
-                  : 'Includes opening balance and posted income.'
-              }
-              tone="positive"
-              icon={ArrowUpRight}
-            />
-            <AccountDetailStatsTile
-              label={isCreditCard ? 'Charges' : 'Money out'}
-              value={formatCurrency(
-                isCreditCard ? creditCardCharges : moneyOut,
-                account.currency
-              )}
-              hint={
-                isCreditCard
-                  ? 'Card spend posted to this account so far.'
-                  : 'Expenses posted from this account so far.'
-              }
-              tone="negative"
-              icon={ArrowDownLeft}
-            />
-            <AccountDetailStatsTile
-              label="Transfers"
-              value={formatCurrency(transferMoves, account.currency)}
-              hint="Internal balance moves tied to this account."
-              tone="transfer"
-              icon={ArrowRightLeft}
-            />
-            <AccountDetailStatsTile
-              label="Last activity"
-              value={lastActivity}
-              hint={`${accountTransactions.length} total transaction${accountTransactions.length === 1 ? '' : 's'}.`}
-              icon={Calendar}
-            />
-          </div>
-        ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
           <div className="rounded-[30px] border border-[#17211c] bg-[#0f1512] p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-[26px] font-bold tracking-tight text-[#f4f7f5]">
-                  Recent activity
+                  Transaction history
                 </h3>
                 <p className="mt-1 text-[14px] font-medium text-[#7f8c86]">
-                  Everything that has touched this account so far.
+                  {isCreditCard
+                    ? 'Card spending, card payments, and balance moves under this account appear here.'
+                    : 'Expenses, income, and transfers under this account appear here.'}
                 </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-full bg-[#18221d]">

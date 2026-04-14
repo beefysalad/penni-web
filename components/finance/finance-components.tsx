@@ -222,6 +222,8 @@ export function TransactionRow({
     normalizedTitle === 'payment' ||
     normalizedTitle.includes('pay card') ||
     normalizedTitle.includes('card payment')
+  const isWithdrawal = isTransfer && normalizedTitle.includes('withdraw')
+  const isDeposit = isTransfer && normalizedTitle.includes('deposit')
   const isCreditCardAccount = accountType === 'CREDIT_CARD'
   const isCardPayment = isTransfer && (isCreditCardAccount || looksLikePayment)
   const amountColor = isTransfer ? 'text-[#ffd66b]' : isExpense ? 'text-[#ff8a94]' : 'text-[#41d6b2]'
@@ -233,6 +235,10 @@ export function TransactionRow({
       ? isCreditCardAccount
         ? 'Payment received'
         : 'Card payment'
+      : isWithdrawal
+        ? 'Withdrawal'
+        : isDeposit
+          ? 'Deposit'
       : transaction.type === 'INCOME'
         ? 'Transfer received'
         : 'Transfer sent'
@@ -245,6 +251,10 @@ export function TransactionRow({
         : transaction.source === 'TRANSFER'
           ? isCardPayment
             ? 'Card payment'
+            : isWithdrawal
+              ? 'Withdrawal'
+              : isDeposit
+                ? 'Deposit'
             : 'Transfer'
           : null
 
